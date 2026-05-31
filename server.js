@@ -39,6 +39,93 @@ let totalRoundsPlayed = 0;
 
 const feedbackCooldown = new Map(); // guestId -> 上次发送时间戳（1分钟限制）
 
+// ============ Friend System ============
+const friendRequests = new Map(); // toGuestId -> Array<{from, ts}>
+const friendships = new Set();    // "g1#g2" sorted
+const privateChats = new Map();   // "g1#g2" sorted -> Array<{from, to, message, ts}>
+const privateChatUnread = new Map(); // guestId -> Map<fromId, count>
+
+function getFriendshipKey(a, b) {
+  return a < b ? `${a}#${b}` : `${b}#${a}`;
+}
+
+function getFriendList(guestId) {
+  const list = [];
+  for (const key of friendships) {
+    const [ida, idb] = key.split('#');
+    if (ida === guestId || idb === guestId) {
+      const fid = ida === guestId ? idb : ida;
+      const p = playerStats.get(fid);
+      const online = Array.from(onlineSockets.values()).some(o => o.guestId === fid);
+      list.push({
+        guestId: fid,
+        nickname: p ? p.nickname : '未知',
+        gender: p ? p.gender : 'male',
+        genderLabel: p ? p.genderLabel : null,
+        nameBattlePrefix: p ? (p.nameBattlePrefix || '') : '',
+        nameBattleScore: p ? (p.nameBattleScore || 0) : 0,
+        nameBattleCode: p ? (p.nameBattleCode || '') : '',
+        online
+      });
+    }
+  }
+  // online first
+  list.sort((a, b) => (b.online === a.online) ? 0 : (b.online ? 1 : -1));
+  return list;
+}
+
+function getPendingRequests(guestId) {
+  const reqs = friendRequests.get(guestId) || [];
+  return reqs.map(r => {
+    const p = playerStats.get(r.from);
+    return {
+      from: r.from,
+      nickname: p ? p.nickname : '未知',
+      gender: p ? p.gender : 'male',
+      genderLabel: p ? p.genderLabel : null,
+      nameBattlePrefix: p ? (p.nameBattlePrefix || '') : '',
+      nameBattleScore: p ? (p.nameBattleScore || 0) : 0,
+      nameBattleCode: p ? (p.nameBattleCode || '') : '',
+      ts: r.ts
+    };
+  });
+}
+
+function addPrivateMessage(from, to, message) {
+  const key = getFriendshipKey(from, to);
+  if (!privateChats.has(key)) privateChats.set(key, []);
+  const arr = privateChats.get(key);
+  arr.push({ from, to, message: String(message).slice(0, 280), ts: Date.now() });
+  if (arr.length > 100) arr.shift();
+}
+
+function getPrivateHistory(guestId, friendId) {
+  const key = getFriendshipKey(guestId, friendId);
+  return (privateChats.get(key) || []).slice(-50);
+}
+
+function clearUnread(guestId, fromId) {
+  const map = privateChatUnread.get(guestId);
+  if (map) {
+    map.delete(fromId);
+    if (map.size === 0) privateChatUnread.delete(guestId);
+  }
+}
+
+function incUnread(to, from) {
+  if (!privateChatUnread.has(to)) privateChatUnread.set(to, new Map());
+  const map = privateChatUnread.get(to);
+  map.set(from, (map.get(from) || 0) + 1);
+}
+
+function getUnreadCounts(guestId) {
+  const map = privateChatUnread.get(guestId);
+  if (!map) return {};
+  const obj = {};
+  for (const [k, v] of map.entries()) obj[k] = v;
+  return obj;
+}
+
 // ==================== 短小色情房间名生成器 ====================
 // 目标：3~6字为主，色情但语句通顺，五花八门
 const ROOM_ADJ = [
@@ -1214,6 +1301,9 @@ io.on('connection', (socket) => {
       stats: { ...player }
     });
 
+    // 推送好友列表
+    socket.emit('friend_update', { friends: getFriendList(player.guestId), requests: getPendingRequests(player.guestId), unread: getUnreadCounts(player.guestId) });
+
     socket.emit('lobby_update', getLobbyData());
   });
 
@@ -1700,6 +1790,206 @@ io.on('connection', (socket) => {
     broadcastLobby();
   });
 
+  // ===== 好友系统 =====
+  socket.on('friend_search', (targetId) => {
+    const info = onlineSockets.get(socket.id);
+    if (!info) return;
+    const p = playerStats.get(targetId);
+    if (!p) {
+      socket.emit('friend_search_result', { found: false, targetId });
+      return;
+    }
+    socket.emit('friend_search_result', {
+      found: true,
+      targetId: p.guestId,
+      nickname: p.nickname,
+      gender: p.gender,
+      genderLabel: p.genderLabel,
+      nameBattlePrefix: p.nameBattlePrefix || '',
+      nameBattleScore: p.nameBattleScore || 0,
+      nameBattleCode: p.nameBattleCode || ''
+    });
+  });
+
+  socket.on('friend_request_send', (targetId) => {
+    const info = onlineSockets.get(socket.id);
+    if (!info || !targetId || targetId === info.guestId) return;
+
+    // 检查是否已经是好友
+    const key = getFriendshipKey(info.guestId, targetId);
+    if (friendships.has(key)) {
+      socket.emit('error_msg', '对方已经是你的好友');
+      return;
+    }
+
+    // 检查目标是否存在
+    const target = playerStats.get(targetId);
+    if (!target) {
+      socket.emit('error_msg', '用户不存在');
+      return;
+    }
+
+    // 检查是否已经发送过请求
+    const targetReqs = friendRequests.get(targetId) || [];
+    if (targetReqs.some(r => r.from === info.guestId)) {
+      socket.emit('error_msg', '好友请求已发送，等待对方处理');
+      return;
+    }
+
+    // 检查对方是否已向我发送请求（如果是，自动双向通过）
+    const myReqs = friendRequests.get(info.guestId) || [];
+    const mutual = myReqs.find(r => r.from === targetId);
+    if (mutual) {
+      // 自动双向接受
+      friendships.add(key);
+      friendRequests.set(info.guestId, myReqs.filter(r => r.from !== targetId));
+      socket.emit('friend_update', { friends: getFriendList(info.guestId), requests: getPendingRequests(info.guestId), unread: getUnreadCounts(info.guestId) });
+      // 通知对方
+      for (const [sid, oinfo] of onlineSockets.entries()) {
+        if (oinfo.guestId === targetId) {
+          io.to(sid).emit('friend_update', { friends: getFriendList(targetId), requests: getPendingRequests(targetId), unread: getUnreadCounts(targetId) });
+          io.to(sid).emit('friend_request_auto_accepted', { from: info.guestId, nickname: info.nickname });
+          break;
+        }
+      }
+      socket.emit('friend_request_auto_accepted', { from: targetId, nickname: target.nickname });
+      return;
+    }
+
+    // 添加请求
+    if (!friendRequests.has(targetId)) friendRequests.set(targetId, []);
+    friendRequests.get(targetId).push({ from: info.guestId, ts: Date.now() });
+
+    socket.emit('friend_request_sent', { targetId, nickname: target.nickname });
+
+    // 实时通知对方
+    for (const [sid, oinfo] of onlineSockets.entries()) {
+      if (oinfo.guestId === targetId) {
+        io.to(sid).emit('friend_request_received', {
+          from: info.guestId,
+          nickname: info.nickname,
+          gender: info.gender,
+          genderLabel: info.genderLabel,
+          ts: Date.now()
+        });
+        io.to(sid).emit('friend_update', { friends: getFriendList(targetId), requests: getPendingRequests(targetId), unread: getUnreadCounts(targetId) });
+        break;
+      }
+    }
+  });
+
+  socket.on('friend_request_accept', (fromId) => {
+    const info = onlineSockets.get(socket.id);
+    if (!info || !fromId) return;
+
+    const myReqs = friendRequests.get(info.guestId) || [];
+    if (!myReqs.some(r => r.from === fromId)) {
+      socket.emit('error_msg', '该好友请求不存在');
+      return;
+    }
+
+    const key = getFriendshipKey(info.guestId, fromId);
+    friendships.add(key);
+    friendRequests.set(info.guestId, myReqs.filter(r => r.from !== fromId));
+
+    socket.emit('friend_update', { friends: getFriendList(info.guestId), requests: getPendingRequests(info.guestId), unread: getUnreadCounts(info.guestId) });
+
+    // 通知对方
+    for (const [sid, oinfo] of onlineSockets.entries()) {
+      if (oinfo.guestId === fromId) {
+        io.to(sid).emit('friend_update', { friends: getFriendList(fromId), requests: getPendingRequests(fromId), unread: getUnreadCounts(fromId) });
+        break;
+      }
+    }
+  });
+
+  socket.on('friend_request_reject', (fromId) => {
+    const info = onlineSockets.get(socket.id);
+    if (!info || !fromId) return;
+
+    const myReqs = friendRequests.get(info.guestId) || [];
+    friendRequests.set(info.guestId, myReqs.filter(r => r.from !== fromId));
+
+    socket.emit('friend_update', { friends: getFriendList(info.guestId), requests: getPendingRequests(info.guestId), unread: getUnreadCounts(info.guestId) });
+  });
+
+  socket.on('friend_remove', (targetId) => {
+    const info = onlineSockets.get(socket.id);
+    if (!info || !targetId) return;
+
+    const key = getFriendshipKey(info.guestId, targetId);
+    friendships.delete(key);
+
+    socket.emit('friend_update', { friends: getFriendList(info.guestId), requests: getPendingRequests(info.guestId), unread: getUnreadCounts(info.guestId) });
+
+    // 通知对方
+    for (const [sid, oinfo] of onlineSockets.entries()) {
+      if (oinfo.guestId === targetId) {
+        io.to(sid).emit('friend_update', { friends: getFriendList(targetId), requests: getPendingRequests(targetId), unread: getUnreadCounts(targetId) });
+        break;
+      }
+    }
+  });
+
+  socket.on('friend_list', () => {
+    const info = onlineSockets.get(socket.id);
+    if (!info) return;
+    socket.emit('friend_update', { friends: getFriendList(info.guestId), requests: getPendingRequests(info.guestId), unread: getUnreadCounts(info.guestId) });
+  });
+
+  socket.on('private_chat_send', ({ to, message }) => {
+    const info = onlineSockets.get(socket.id);
+    if (!info || !to || !message) return;
+
+    const key = getFriendshipKey(info.guestId, to);
+    if (!friendships.has(key)) {
+      socket.emit('error_msg', '对方不是好友，无法发送私信');
+      return;
+    }
+
+    const text = String(message).trim().slice(0, 280);
+    if (!text) return;
+
+    addPrivateMessage(info.guestId, to, text);
+
+    const msgObj = { from: info.guestId, to, message: text, ts: Date.now() };
+
+    // 发送给自己
+    socket.emit('private_chat_message', msgObj);
+
+    // 发送给对方（如果在线）
+    let targetOnline = false;
+    for (const [sid, oinfo] of onlineSockets.entries()) {
+      if (oinfo.guestId === to) {
+        io.to(sid).emit('private_chat_message', msgObj);
+        targetOnline = true;
+        break;
+      }
+    }
+
+    // 如果对方不在线，增加未读计数
+    if (!targetOnline) {
+      incUnread(to, info.guestId);
+    }
+  });
+
+  socket.on('private_chat_history', ({ with: friendId }) => {
+    const info = onlineSockets.get(socket.id);
+    if (!info || !friendId) return;
+    const history = getPrivateHistory(info.guestId, friendId);
+    socket.emit('private_chat_history', { friendId, history });
+    clearUnread(info.guestId, friendId);
+    socket.emit('friend_update', { friends: getFriendList(info.guestId), requests: getPendingRequests(info.guestId), unread: getUnreadCounts(info.guestId) });
+  });
+
+  socket.on('private_chat_read', ({ with: friendId }) => {
+    const info = onlineSockets.get(socket.id);
+    if (!info || !friendId) return;
+    clearUnread(info.guestId, friendId);
+    socket.emit('friend_update', { friends: getFriendList(info.guestId), requests: getPendingRequests(info.guestId), unread: getUnreadCounts(info.guestId) });
+  });
+
+  // ===== 断开连接 =====
   socket.on('disconnect', () => {
     console.log('[disconnect]', socket.id);
     const info = onlineSockets.get(socket.id);
