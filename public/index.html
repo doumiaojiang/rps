@@ -1,0 +1,3570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>锤子剪刀布 v1.5.0 · 联机对战</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&amp;display=swap');
+    
+    :root {
+      --primary: #9f1239;
+    }
+    
+    body {
+      font-family: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+    }
+    
+    .game-bg {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+    }
+    
+    .chinese-red {
+      color: #9f1239;
+    }
+    
+    .section {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .table-card {
+      transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1), 
+                  box-shadow 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+    
+    .table-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    }
+    
+    .move-btn {
+      transition: all 0.1s ease;
+      user-select: none;
+    }
+    
+    .move-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2);
+    }
+    
+    .move-btn:active {
+      transform: scale(0.95);
+    }
+    
+    .move-btn.selected {
+      transform: scale(1.08);
+      box-shadow: 0 0 0 4px #9f1239;
+      border-color: #9f1239;
+    }
+    
+    .chat-scroll {
+      scrollbar-width: thin;
+      scrollbar-color: #4b5563 #1f2937;
+    }
+    
+    .choice-display {
+      font-size: 3rem;
+      line-height: 1;
+      transition: transform 0.3s ease;
+    }
+    @media (min-width: 640px) {
+      .choice-display { font-size: 4rem; }
+    }
+    
+    .result-banner {
+      animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    
+    @keyframes popIn {
+      0% { transform: scale(0.6); opacity: 0; }
+      70% { transform: scale(1.1); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    .system-msg {
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.025em;
+    }
+    
+    .player-name {
+      font-weight: 600;
+      letter-spacing: -.025em;
+    }
+    
+    .rps-emoji {
+      filter: drop-shadow(0 4px 6px rgb(0 0 0 / 0.2));
+    }
+    
+    .lobby-container {
+      background: #0f172a;
+    }
+    
+    .stat-number {
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .match-row {
+      transition: background 0.1s ease;
+    }
+    
+    .match-row:hover {
+      background: #1e2937;
+    }
+    
+    .nav-active {
+      background: #9f1239;
+      color: white;
+    }
+
+    /* Safe area for notched phones */
+    .pb-safe {
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    /* Mobile chat drawer */
+    @media (max-width: 1023px) {
+      #chat-panel {
+        display: none;
+      }
+      #chat-panel.mobile-open {
+        display: flex;
+        margin-top: 0.75rem;
+      }
+    }
+
+    .gender-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1;
+      padding: 1px 6px;
+      border-radius: 4px;
+      min-width: 18px;
+      vertical-align: middle;
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-200 game-bg min-h-screen pb-safe">
+  <!-- Top Nav -->
+  <div class="border-b border-slate-700 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-x-2 sm:gap-x-3">
+        <div class="w-8 h-8 sm:w-9 sm:h-9 bg-rose-700 rounded-xl flex items-center justify-center text-lg sm:text-xl flex-shrink-0">✊</div>
+        <div class="flex-shrink-0">
+          <span class="font-bold text-xl sm:text-2xl tracking-tighter whitespace-nowrap">锤子剪刀布</span>
+          <span class="text-[10px] text-slate-400 font-mono">v1.5.0</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-x-2 sm:gap-x-4 text-sm">
+        <!-- Online -->
+        <div class="flex items-center gap-x-1.5 sm:gap-x-2 bg-slate-800 px-2 sm:px-3 py-1 sm:py-1.5 rounded-2xl text-xs sm:text-sm">
+          <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+          <span id="online-count" class="font-medium tabular-nums">0</span>
+          <span class="text-slate-400 hidden sm:inline">在线</span>
+        </div>
+
+        <!-- 个人设定按钮 (手机优化) -->
+        <button onclick="showPersonalSettingsModal()"
+                class="flex items-center gap-x-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 transition rounded-2xl px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm flex-shrink-0">
+          <i class="fa-solid fa-user-gear text-rose-400"></i>
+          <span class="font-medium text-slate-200 hidden sm:inline">个人设定</span>
+          <span class="font-medium text-slate-200 sm:hidden">设定</span>
+        </button>
+
+        <!-- My Stats (compact on mobile) -->
+        <div class="flex items-center gap-x-2 sm:gap-x-3 text-xs sm:text-sm bg-slate-800 px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-2xl">
+          <div class="flex items-center gap-x-1">
+            <span class="text-emerald-400">胜</span>
+            <span id="my-wins" class="font-semibold tabular-nums text-emerald-300">0</span>
+          </div>
+          <div class="flex items-center gap-x-1">
+            <span class="text-rose-400">负</span>
+            <span id="my-losses" class="font-semibold tabular-nums text-rose-300">0</span>
+          </div>
+          <div class="hidden sm:flex items-center gap-x-1">
+            <span class="text-amber-400">平</span>
+            <span id="my-draws" class="font-semibold tabular-nums text-amber-300">0</span>
+          </div>
+          <div class="flex items-center gap-x-1 text-rose-400">
+            <span>罚</span>
+            <span id="my-punishments" class="font-semibold tabular-nums">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOBBY VIEW -->
+  <div id="lobby-view" class="max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
+    <!-- 顶部操作按钮（创建 + 快速匹配） -->
+    <div class="flex flex-col sm:flex-row gap-3 mb-4">
+      <button data-action="show-create-modal"
+              class="flex-1 sm:flex-none sm:min-w-[180px] bg-rose-600 hover:bg-rose-500 active:bg-rose-700 transition font-semibold py-3 px-6 rounded-2xl flex items-center justify-center gap-x-2 text-base shadow-lg shadow-rose-900/50">
+        <i class="fa-solid fa-plus"></i>
+        <span>创建新桌子</span>
+      </button>
+      
+      <button data-action="quick-match"
+              class="flex-1 sm:flex-none sm:min-w-[160px] bg-slate-700 hover:bg-slate-600 active:bg-slate-800 transition font-semibold py-3 px-6 rounded-2xl flex items-center justify-center gap-x-2 text-base">
+        <i class="fa-solid fa-bolt-lightning"></i>
+        <span>快速匹配</span>
+      </button>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-4 lg:gap-6 items-start">
+      <!-- Left: Hall (proper flex column so the room list can scroll nicely even with 10+ rooms) -->
+      <div class="w-full lg:w-72 xl:w-80 shrink-0 flex flex-col min-h-0">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <div class="font-bold text-xl flex items-center gap-2">
+            <i class="fa-solid fa-door-open text-rose-400"></i>
+            <span>大厅</span>
+          </div>
+          <div id="table-count" class="text-xs bg-slate-700 px-2.5 py-0.5 rounded-full tabular-nums">0 张桌子</div>
+        </div>
+
+        <!-- Table List (flex-1 + internal scroll — this is the key fix for >5 rooms) -->
+        <div class="bg-slate-800 rounded-3xl p-1 border border-slate-700 flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div class="px-3 pt-2 pb-1 text-xs uppercase tracking-widest text-slate-400 font-medium flex-shrink-0">当前桌子</div>
+          <div id="table-list" class="flex-1 min-h-0 overflow-auto p-1 space-y-1.5 chat-scroll">
+            <!-- JS populated -->
+          </div>
+          <div id="table-list-empty" class="px-3 py-8 text-center text-slate-500 text-sm hidden flex-shrink-0">
+            暂时没有桌子<br>
+            <span class="text-xs">点击上方创建</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Welcome + Records -->
+      <div class="w-full lg:flex-1 lg:min-w-0">
+        <div class="mb-3 sm:mb-4 flex items-center justify-between">
+          <div>
+            <div class="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tighter">欢迎回来，<span id="welcome-name" class="text-rose-300">游客</span></div>
+            <div class="text-slate-400 mt-0.5 text-sm sm:text-base">无需注册，立即开战。选择或创建一个桌子开始对局。</div>
+          </div>
+          <button onclick="showChangelog()"
+                  class="text-[10px] sm:text-xs px-2.5 sm:px-3 py-1 sm:py-1.5 bg-slate-700 hover:bg-slate-600 rounded-2xl text-slate-300 flex items-center gap-1 flex-shrink-0">
+            <i class="fa-solid fa-history"></i>
+            <span class="hidden sm:inline">更新日志</span>
+            <span class="sm:hidden">日志</span>
+          </button>
+        </div>
+
+        <!-- Global Stats -->
+        <div class="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-5">
+          <div class="bg-slate-800 border border-slate-700 rounded-3xl p-3 sm:p-4">
+            <div class="text-[10px] sm:text-xs text-slate-400">已进行对局</div>
+            <div id="global-rounds" class="text-2xl sm:text-3xl lg:text-4xl font-bold tabular-nums mt-0.5 sm:mt-1">0</div>
+          </div>
+          <div class="bg-slate-800 border border-slate-700 rounded-3xl p-3 sm:p-4">
+            <div class="text-[10px] sm:text-xs text-slate-400">在线玩家</div>
+            <div id="global-online" class="text-2xl sm:text-3xl lg:text-4xl font-bold tabular-nums mt-0.5 sm:mt-1">0</div>
+          </div>
+          <div class="bg-slate-800 border border-slate-700 rounded-3xl p-3 sm:p-4">
+            <div class="text-[10px] sm:text-xs text-slate-400">当前活跃桌子</div>
+            <div id="global-tables" class="text-2xl sm:text-3xl lg:text-4xl font-bold tabular-nums mt-0.5 sm:mt-1">0</div>
+          </div>
+        </div>
+
+        <!-- Recent Matches -->
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="font-semibold flex items-center gap-2">
+              <i class="fa-solid fa-tachometer-alt text-amber-400"></i>
+              <span>最近战绩</span>
+            </div>
+            <div onclick="refreshLobby()" class="text-xs cursor-pointer text-slate-400 hover:text-slate-200 flex items-center gap-1">
+              <i class="fa-solid fa-sync-alt"></i> <span>刷新</span>
+            </div>
+          </div>
+          
+          <div id="recent-matches" class="space-y-1 text-sm max-h-[260px] overflow-auto chat-scroll">
+            <!-- JS populated rows -->
+          </div>
+          <div id="recent-empty" class="text-center py-6 text-slate-500 text-sm">暂无对局记录</div>
+        </div>
+      </div>
+
+      <!-- Right: My Recent Personal -->
+      <div class="w-full lg:w-64 xl:w-72 shrink-0">
+        <div class="font-semibold mb-1.5 sm:mb-2 px-1 flex items-center gap-2">
+          <i class="fa-solid fa-user-check text-emerald-400"></i>
+          <span>我的记录</span>
+        </div>
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl p-3 sm:p-4 min-h-[220px] sm:min-h-[320px]">
+          <div id="my-recent" class="space-y-1.5 sm:space-y-2 text-sm">
+            <!-- populated by JS -->
+          </div>
+          <div id="my-recent-empty" class="text-slate-500 text-xs text-center py-4 sm:py-8">还没有记录</div>
+        </div>
+        
+        <div class="mt-4 text-[10px] text-center text-slate-500">
+          所有数据仅存在于本次服务器运行期间<br>
+          刷新页面或重启服务器会清空
+        </div>
+      </div>
+    </div>
+
+    <!-- 留言板（反馈bug + 更新建议） + 底部链接 -->
+    <div class="mt-5">
+      <div class="bg-slate-800 border border-slate-700 rounded-3xl p-4">
+        <div class="flex items-center gap-2 mb-2 text-sm font-semibold">
+          <i class="fa-solid fa-comment-dots text-amber-400"></i>
+          <span>留言板 · 反馈bug和更新建议</span>
+          <span class="hidden sm:inline text-[10px] text-slate-500 font-normal ml-1">(30字内，1分钟1条)</span>
+        </div>
+
+        <div class="flex gap-2 mb-2.5">
+          <input id="feedback-input" type="text" maxlength="30" placeholder="写下bug或建议..." 
+                 class="flex-1 min-w-0 bg-slate-900 border border-slate-600 focus:border-amber-500 text-sm rounded-2xl px-3 py-2 outline-none placeholder:text-slate-500">
+          <button id="feedback-send" 
+                  class="px-3 sm:px-5 py-2 text-sm font-medium bg-amber-600 hover:bg-amber-500 active:bg-amber-700 rounded-2xl transition flex items-center gap-1.5 flex-shrink-0 whitespace-nowrap">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span class="hidden sm:inline">发送</span>
+          </button>
+        </div>
+
+        <div id="feedback-list" class="text-xs space-y-1 max-h-[92px] overflow-auto chat-scroll border-t border-slate-700 pt-2 text-slate-300">
+          <!-- JS 动态渲染 -->
+        </div>
+      </div>
+
+      <!-- 底部链接 -->
+      <div class="mt-3 pb-2 text-center text-[11px] text-slate-500 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+        <a href="https://t.me/+X1Jr4GPxgIwzOWY1" target="_blank" rel="noopener" 
+           class="inline-flex items-center gap-1 hover:text-sky-300 transition">
+          <i class="fa-brands fa-telegram"></i>
+          <span>TG群反馈/闲聊</span>
+        </a>
+        <span class="text-slate-700">·</span>
+        <a href="https://x.com/doumiaojiang" target="_blank" rel="noopener" 
+           class="inline-flex items-center gap-1 hover:text-sky-300 transition">
+          <i class="fa-brands fa-x-twitter"></i>
+          <span>@doumiaojiang</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLE VIEW (hidden by default) -->
+  <div id="table-view" class="hidden max-w-screen-2xl mx-auto px-4 sm:px-6 pt-4 sm:pt-5">
+    <div class="flex flex-col lg:flex-row gap-4 lg:gap-5">
+      <!-- Game Area -->
+      <div class="flex-1 bg-slate-800 border border-slate-700 rounded-3xl p-4 sm:p-6">
+        <!-- Table Header -->
+        <!-- 手机优化：标题和徽章优先横排，空间不够时自然换行，避免竖排乱套 -->
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-5 gap-y-2">
+          <div class="flex flex-wrap items-center gap-x-2 sm:gap-x-3">
+            <div id="table-title" class="text-lg sm:text-2xl font-bold tracking-tight break-words"></div>
+
+            <span id="spectator-status" class="text-xs px-2 py-1 bg-sky-900 text-sky-300 rounded hidden">你正在观战</span>
+
+            <div id="table-round-badge" 
+                 class="px-2.5 py-0.5 text-xs sm:text-sm rounded-2xl bg-slate-700 font-medium flex items-center gap-1 shrink-0">
+              <span>第</span><span id="current-round" class="tabular-nums font-semibold text-base sm:text-lg text-rose-300">1</span><span>局</span>
+            </div>
+
+            <span id="punishment-style-badge" class="text-xs px-2 py-1 bg-slate-700 text-slate-300 rounded hidden shrink-0"></span>
+            <span id="draw-punish-badge" class="text-[10px] px-1.5 py-0.5 bg-amber-800 text-amber-300 rounded hidden shrink-0">平局双罚</span>
+
+            <!-- Mobile chat toggle -->
+            <button onclick="toggleMobileChat()"
+                    class="lg:hidden px-2.5 py-1 text-xs bg-sky-700 hover:bg-sky-600 active:bg-sky-800 rounded-2xl flex items-center gap-1.5 shrink-0">
+              <i class="fa-solid fa-comments"></i>
+              <span>聊天</span>
+              <span id="mobile-chat-count" class="text-[10px] px-1.5 py-px bg-sky-800 rounded">0</span>
+            </button>
+          </div>
+
+          <div class="flex gap-1.5 sm:gap-2 shrink-0">
+            <button onclick="resetTableScores()"
+                    class="px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-slate-700 hover:bg-slate-600 active:bg-slate-800 rounded-2xl flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-undo text-xs"></i>
+              <span class="hidden sm:inline">重置</span>
+            </button>
+            <button data-action="leave-table"
+                    class="px-3 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm bg-slate-700 hover:bg-rose-900/60 hover:text-rose-200 rounded-2xl flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-sign-out-alt"></i>
+              <span>离开</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Players + Scores -->
+        <!-- 手机上竖排两个玩家（给长名字+前缀足够宽度），大屏再并排 -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6">
+          <!-- Player A / Me? -->
+          <div id="player-a-card" 
+               class="bg-slate-900 border border-slate-700 rounded-3xl p-4 flex flex-col">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs uppercase tracking-widest text-emerald-400 font-semibold">玩家 A</div>
+                <div id="player-a-name" class="player-name text-lg sm:text-xl mt-0.5">等待加入...</div>
+              </div>
+              <div class="text-right">
+                <div class="text-[10px] text-slate-400">胜场</div>
+                <div id="player-a-score" class="text-4xl font-bold tabular-nums text-emerald-300">0</div>
+              </div>
+            </div>
+            <!-- Choice display -->
+            <div class="mt-auto pt-2 sm:pt-3">
+              <div id="player-a-choice" 
+                   class="choice-display h-16 sm:h-20 flex items-center justify-center text-slate-300">
+                <span class="text-sm text-slate-500">等待出拳</span>
+              </div>
+              <div id="player-a-status" class="text-center text-xs text-emerald-400 mt-1 h-4"></div>
+            </div>
+          </div>
+
+          <!-- Player B -->
+          <div id="player-b-card" 
+               class="bg-slate-900 border border-slate-700 rounded-3xl p-4 flex flex-col">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs uppercase tracking-widest text-rose-400 font-semibold">玩家 B</div>
+                <div id="player-b-name" class="player-name text-lg sm:text-xl mt-0.5">等待加入...</div>
+              </div>
+              <div class="text-right">
+                <div class="text-[10px] text-slate-400">胜场</div>
+                <div id="player-b-score" class="text-4xl font-bold tabular-nums text-rose-300">0</div>
+              </div>
+            </div>
+            <div class="mt-auto pt-2 sm:pt-3">
+              <div id="player-b-choice" 
+                   class="choice-display h-16 sm:h-20 flex items-center justify-center text-slate-300">
+                <span class="text-sm text-slate-500">等待出拳</span>
+              </div>
+              <div id="player-b-status" class="text-center text-xs text-rose-400 mt-1 h-4"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 轮盘惩罚显示区（惩罚模式，支持平局双方） -->
+        <div id="punishment-panel" class="hidden mb-5">
+          <div class="bg-gradient-to-r from-rose-900/90 to-zinc-900 border border-rose-700 rounded-3xl p-5">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-rose-400">🎲</span>
+              <span class="font-bold text-rose-300 tracking-wider" id="punishment-title">轮盘惩罚</span>
+            </div>
+            
+            <!-- 单人模式内容 -->
+            <div id="punishment-single">
+              <div id="punishment-text" class="text-lg sm:text-xl font-medium text-white leading-snug mb-3"></div>
+              <div id="punishment-loser" class="text-sm text-rose-300 mb-2"></div>
+            </div>
+
+            <!-- 平局双方模式内容 -->
+            <div id="punishment-dual" class="hidden">
+              <div id="punishment-dual-text" class="text-base text-rose-200 mb-3"></div>
+              <div id="punishment-dual-list" class="space-y-2 text-sm"></div>
+            </div>
+
+            <!-- 惩罚无计时器（按用户要求移除） -->
+
+            <!-- 单人完成按钮 -->
+            <button id="punishment-complete-btn"
+                    onclick="confirmPunishmentDone()"
+                    class="w-full py-3 bg-rose-600 hover:bg-rose-500 active:bg-rose-700 rounded-2xl font-semibold text-sm transition">
+              我已完成惩罚
+            </button>
+            
+            <!-- 等待提示（单人或双方） -->
+            <div id="punishment-waiting" class="hidden text-center">
+              <div class="text-sm text-rose-300 mb-1">对方正在接受惩罚...</div>
+              <div class="text-xs text-rose-400/70">请耐心等待对方完成并按按钮</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 惩罚完成后选择心情emoji的弹窗 -->
+        <div id="emoji-picker-modal" class="hidden fixed inset-0 bg-black/70 z-[95] flex items-center justify-center p-4">
+          <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-sm p-6">
+            <div class="text-center mb-4">
+              <div class="text-lg font-semibold text-white">惩罚已完成！</div>
+              <div class="text-sm text-slate-400 mt-1">选择一个心情表情告诉对方</div>
+            </div>
+
+            <div class="grid grid-cols-5 gap-3 mb-6" id="emoji-options">
+              <!-- JS动态生成emoji按钮 -->
+            </div>
+
+            <button onclick="skipEmojiSelection()"
+                    class="w-full py-2.5 text-sm text-slate-400 hover:text-slate-200">
+              跳过，直接继续
+            </button>
+          </div>
+        </div>
+
+        <!-- Move Buttons -->
+        <div>
+          <div class="flex items-center justify-center gap-x-1 mb-2">
+            <div class="text-xs uppercase tracking-[1.5px] text-slate-400 font-medium">请选择你的手势</div>
+          </div>
+          
+          <div class="flex justify-center gap-2 sm:gap-3 md:gap-4">
+            <!-- Hammer / Rock -->
+            <button data-action="make-move" data-choice="chui"
+                    class="move-btn group w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 flex flex-col items-center justify-center rounded-3xl border border-slate-600 bg-slate-900 active:bg-slate-800 active:scale-[0.96] transition">
+              <div class="text-5xl sm:text-[3.25rem] md:text-6xl rps-emoji transition">✊</div>
+              <div class="font-semibold mt-0.5 sm:mt-1 text-sm sm:text-base md:text-lg tracking-wider">锤子</div>
+            </button>
+            
+            <!-- Scissors -->
+            <button data-action="make-move" data-choice="jian"
+                    class="move-btn group w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 flex flex-col items-center justify-center rounded-3xl border border-slate-600 bg-slate-900 active:bg-slate-800 active:scale-[0.96] transition">
+              <div class="text-5xl sm:text-[3.25rem] md:text-6xl rps-emoji transition">✌️</div>
+              <div class="font-semibold mt-0.5 sm:mt-1 text-sm sm:text-base md:text-lg tracking-wider">剪刀</div>
+            </button>
+            
+            <!-- Cloth / Paper -->
+            <button data-action="make-move" data-choice="bu"
+                    class="move-btn group w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 flex flex-col items-center justify-center rounded-3xl border border-slate-600 bg-slate-900 active:bg-slate-800 active:scale-[0.96] transition">
+              <div class="text-5xl sm:text-[3.25rem] md:text-6xl rps-emoji transition">🖐️</div>
+              <div class="font-semibold mt-0.5 sm:mt-1 text-sm sm:text-base md:text-lg tracking-wider">布</div>
+            </button>
+          </div>
+          
+          <!-- Countdown (only visible when time limit is active) -->
+          <div id="countdown-area" class="hidden justify-center mt-2 mb-1">
+            <div class="inline-flex items-center gap-2 px-4 py-1 bg-slate-900 border border-slate-700 rounded-2xl text-sm">
+              <i class="fa-solid fa-clock text-amber-400"></i>
+              <span>剩余时间</span>
+              <span id="countdown-value" class="font-mono font-bold text-xl text-amber-300 tabular-nums">15</span>
+              <span class="text-xs text-slate-400">秒</span>
+            </div>
+          </div>
+
+          <div id="move-hint" class="text-center mt-3 text-xs h-5 text-emerald-400"></div>
+        </div>
+
+        <!-- 简洁的观众状态提示（移动端友好，无多余边框） -->
+        <div id="spectator-info" class="mb-3 text-xs text-sky-400 hidden">
+          你正在观战
+        </div>
+
+        <!-- Round History -->
+        <div class="mt-6">
+          <div class="text-xs uppercase font-medium tracking-widest text-slate-400 mb-2 px-1">本桌历史</div>
+          <div id="round-history" 
+               class="bg-slate-950 border border-slate-800 rounded-2xl p-3 min-h-[84px] max-h-[110px] overflow-auto text-xs chat-scroll space-y-px">
+            <!-- JS injected small rows -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Sidebar -->
+      <div id="chat-panel" class="w-full lg:w-80 shrink-0 flex flex-col bg-slate-800 border border-slate-700 rounded-3xl overflow-hidden lg:sticky lg:top-4">
+        <div class="px-4 py-3 border-b border-slate-700 flex items-center gap-2 text-sm font-semibold">
+          <i class="fa-solid fa-comments text-sky-400"></i>
+          <span>实时聊天</span>
+          <span id="chat-count" class="ml-auto text-[10px] px-2 py-px bg-slate-700 rounded">0</span>
+          <!-- Mobile close button -->
+          <button onclick="toggleMobileChat()" class="lg:hidden ml-2 text-sky-300 hover:text-white">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+        
+        <div id="chat-messages" 
+             class="flex-1 p-3 overflow-auto chat-scroll space-y-2 text-sm bg-slate-900"
+             style="min-height: 160px; max-height: 280px;">
+          <!-- messages injected here -->
+        </div>
+        
+        <div class="p-3 border-t border-slate-700 bg-slate-800">
+          <div class="flex gap-2 items-center">
+            <input id="chat-input" type="text" maxlength="160" placeholder="输入消息后按回车..."
+                   onkeydown="if(event.key==='Enter') sendChat()"
+                   class="flex-1 min-w-0 bg-slate-900 border border-slate-700 text-sm rounded-2xl px-4 py-2.5 focus:outline-none focus:border-slate-500">
+            <button onclick="sendChat()"
+                    class="px-3 sm:px-5 bg-sky-600 hover:bg-sky-500 active:bg-sky-700 rounded-2xl transition font-medium flex-shrink-0">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <!-- Create Table Modal -->
+  <div id="create-modal" class="hidden fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-sm flex flex-col overflow-hidden"
+         style="max-height: 92dvh; padding-bottom: env(safe-area-inset-bottom, 0px)">
+      <div class="font-bold text-xl px-6 pt-6 pb-3 flex-shrink-0">创建新桌子</div>
+
+      <!-- 可滚动内容区 -->
+      <div class="flex-1 overflow-y-auto px-6 space-y-4 text-sm" style="padding-bottom: 4rem;">
+
+        <!-- 桌子名称 -->
+        <div class="mb-1">
+          <label class="text-sm text-slate-400 block mb-1.5">桌子名称</label>
+          <input id="modal-table-name" type="text" maxlength="20" placeholder="新对局"
+                 class="w-full bg-slate-900 border border-slate-700 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:border-slate-500">
+        </div>
+
+        <!-- 游戏模式 -->
+        <div class="mb-3">
+          <label class="text-sm text-slate-400 block mb-1">游戏模式</label>
+          <select id="modal-game-mode" class="w-full bg-slate-900 border border-slate-600 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:border-slate-500">
+            <option value="unlimited">无限制（打到不想打为止）</option>
+            <option value="best_of_3">3局2胜</option>
+            <option value="best_of_5">5局3胜</option>
+            <option value="first_to_5">先到5胜</option>
+          </select>
+        </div>
+
+        <!-- 平局惩罚双方 -->
+        <div class="mb-4">
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" id="modal-punish-on-draw" class="accent-rose-600 w-4 h-4">
+            <span class="text-slate-300">平局惩罚双方</span>
+          </label>
+          <div class="text-xs text-slate-400 mt-0.5 ml-6">开启后平局也会触发惩罚，且双方都必须完成才能进入下一局</div>
+        </div>
+
+        <!-- 名字争夺战房间 -->
+        <div class="mb-4 border border-rose-800/50 bg-slate-900/50 rounded-2xl p-3">
+          <label class="flex items-center gap-2 text-sm cursor-pointer mb-2">
+            <input type="checkbox" id="modal-name-battle-room" class="accent-rose-600 w-4 h-4" 
+                   onchange="document.getElementById('modal-name-battle-bet').classList.toggle('hidden', !this.checked)">
+            <span class="text-rose-300 font-medium">名字争夺战房间</span>
+          </label>
+          <div class="text-xs text-slate-400 mb-2 ml-6">只有开启名字争夺战的玩家才能上桌，未开启者只能观战</div>
+          
+          <div id="modal-name-battle-bet" class="hidden ml-6">
+            <label class="text-xs text-slate-400 block mb-1">每局赌注（双方分数变动）</label>
+            <select id="modal-name-battle-bet-value" class="bg-slate-800 border border-slate-600 rounded-xl px-3 py-1.5 text-sm focus:outline-none">
+              <option value="5">5 分</option>
+              <option value="10" selected>10 分</option>
+              <option value="15">15 分</option>
+              <option value="20">20 分</option>
+            </select>
+            <div class="text-[10px] text-rose-400 mt-1">赢 +赌注，输 -赌注（仅双方都开启时生效）</div>
+          </div>
+        </div>
+
+        <!-- 惩罚风格（通用） -->
+        <div class="mb-4">
+          <div class="text-sm text-slate-400 mb-1.5">惩罚风格（通用，可多选，最多 3 个）</div>
+
+          <!-- 全部风格放在一个通用列表里 -->
+          <div id="punishment-style-details" class="block">
+            <div class="max-h-[220px] sm:max-h-[260px] overflow-y-auto pr-1 snap-y snap-mandatory space-y-2 border border-slate-700 rounded-2xl p-2 bg-slate-900/60" id="punishment-style-cards">
+              <!-- 轻度 -->
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="fantasy" class="hidden peer">
+                <div class="peer-checked:border-purple-500 peer-checked:bg-purple-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm flex items-center gap-1">
+                    <span>轻度 聊天室宠物羞辱 v1.0</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-purple-600/80 rounded text-white">NEW</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5">聊天自辱 + 动物角色扮演（轻度）</div>
+                </div>
+              </label>
+
+
+
+              <!-- 贞操锁杂鱼禁欲（轻度）带 NEW -->
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="motherbeast_light" class="hidden peer">
+                <div class="peer-checked:border-cyan-500 peer-checked:bg-cyan-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm flex items-center gap-1">
+                    <span>轻度 带锁母畜禁欲惩罚</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-cyan-600/80 rounded text-white">NEW</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5">锁内摇晃 + 轻震畜蛋 + 加时为主（40-60秒）</div>
+                </div>
+              </label>
+
+              <!-- 乳首杂鱼高潮惩罚（轻度）带 NEW -->
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="nipple_loser_light" class="hidden peer">
+                <div class="peer-checked:border-cyan-500 peer-checked:bg-cyan-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm flex items-center gap-1">
+                    <span>轻度 乳首杂鱼高潮惩罚</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-cyan-600/80 rounded text-white">NEW</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5">指腹挑逗 + 轻自报 + 短时姿势（40-55秒）</div>
+                </div>
+              </label>
+
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="light" class="hidden peer">
+                <div class="peer-checked:border-emerald-500 peer-checked:bg-emerald-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">轻度SM惩罚</div>
+                  <div class="text-xs text-slate-400 mt-0.5">轻拍打 + 简单书写 + 短时姿势</div>
+                </div>
+              </label>
+
+              <!-- 中度 -->
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="fantasy_medium" class="hidden peer">
+                <div class="peer-checked:border-purple-500 peer-checked:bg-purple-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm flex items-center gap-1">
+                    <span>中度 聊天室宠物羞辱 v1.0</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-purple-600/80 rounded text-white">NEW</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5">宠物化 + 自我暴露与自辱（中度）</div>
+                </div>
+              </label>
+
+
+
+              <!-- 贞操锁杂鱼禁欲（中度）带 NEW -->
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="motherbeast_medium" class="hidden peer">
+                <div class="peer-checked:border-cyan-500 peer-checked:bg-cyan-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm flex items-center gap-1">
+                    <span>中度 带锁母畜禁欲惩罚</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-cyan-600/80 rounded text-white">NEW</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5">震动棒/筋膜枪 + 锁内寸止 + 暴露姿势（1-1.5分钟）</div>
+                </div>
+              </label>
+
+              <!-- 乳首杂鱼高潮惩罚（中度）带 NEW -->
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="nipple_loser_medium" class="hidden peer">
+                <div class="peer-checked:border-cyan-500 peer-checked:bg-cyan-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm flex items-center gap-1">
+                    <span>中度 乳首杂鱼高潮惩罚</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-cyan-600/80 rounded text-white">NEW</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5">乳夹+牙刷/跳蛋 + 中等自辱 + 暴露姿势（1-1.5分钟）</div>
+                </div>
+              </label>
+
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="medium" class="hidden peer">
+                <div class="peer-checked:border-orange-500 peer-checked:bg-orange-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">中度SM惩罚</div>
+                  <div class="text-xs text-slate-400 mt-0.5">中等冲击 + 敏感区 + 长时间暴露</div>
+                </div>
+              </label>
+
+              <!-- 重度 -->
+              <!-- NEW: 重度聊天室宠物羞辱放最上面 -->
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="pet_heavy" class="hidden peer">
+                <div class="peer-checked:border-rose-600 peer-checked:bg-rose-900/40 border border-rose-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm flex items-center gap-1">
+                    <span>重度 聊天室宠物羞辱 v1.0</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-rose-600/80 rounded text-white">NEW</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5">贱畜扮演 + 真实信息暴露 + 极端自辱</div>
+                </div>
+              </label>
+
+              <!-- 新增：乳首杂鱼高潮惩罚（重度）带 NEW -->
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="nipple_loser_heavy" class="hidden peer">
+                <div class="peer-checked:border-cyan-500 peer-checked:bg-cyan-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm flex items-center gap-1">
+                    <span>重度 乳首杂鱼高潮惩罚</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-cyan-600/80 rounded text-white">NEW</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5">挂重物 + 窗前露出 + 蟹腿 + 极端自辱（1.5-2分钟）</div>
+                </div>
+              </label>
+
+              <!-- 贞操锁杂鱼禁欲（重度）带 NEW -->
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="motherbeast_heavy" class="hidden peer">
+                <div class="peer-checked:border-cyan-500 peer-checked:bg-cyan-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm flex items-center gap-1">
+                    <span>重度 带锁母畜禁欲惩罚</span>
+                    <span class="text-[10px] px-1.5 py-0.5 bg-cyan-600/80 rounded text-white">NEW</span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-0.5">挂重物 + 窗前暴露 + 锁内高潮后必须吃（1.5-2分钟）</div>
+                </div>
+              </label>
+
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="heavy" class="hidden peer">
+                <div class="peer-checked:border-red-500 peer-checked:bg-red-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">重度SM惩罚</div>
+                  <div class="text-xs text-slate-400 mt-0.5">重度打骂 + 极端姿势</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="tattoo" class="hidden peer">
+                <div class="peer-checked:border-violet-500 peer-checked:bg-violet-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">纹身惩罚</div>
+                  <div class="text-xs text-slate-400 mt-0.5">身体部位 + 羞耻文字贴纸</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="blacked" class="hidden peer">
+                <div class="peer-checked:border-amber-500 peer-checked:bg-amber-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">媚黑惩罚</div>
+                  <div class="text-xs text-slate-400 mt-0.5">黑人崇拜 + 种族羞辱</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="anal" class="hidden peer">
+                <div class="peer-checked:border-orange-500 peer-checked:bg-orange-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">肛交惩罚</div>
+                  <div class="text-xs text-slate-400 mt-0.5">后庭扩张 + 肛门羞辱</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="oral" class="hidden peer">
+                <div class="peer-checked:border-pink-500 peer-checked:bg-pink-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">口交惩罚</div>
+                  <div class="text-xs text-slate-400 mt-0.5">口交侍奉 + 舌头使用</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="deepthroat" class="hidden peer">
+                <div class="peer-checked:border-rose-500 peer-checked:bg-rose-900/30 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">深喉惩罚</div>
+                  <div class="text-xs text-slate-400 mt-0.5">喉咙扩张 + 深喉训练</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="edging" class="hidden peer">
+                <div class="peer-checked:border-violet-500 peer-checked:bg-violet-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">寸止惩罚</div>
+                  <div class="text-xs text-slate-400 mt-0.5">边缘控制 + 禁止高潮</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="sex" class="hidden peer">
+                <div class="peer-checked:border-red-500 peer-checked:bg-red-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">性交惩罚（仅女性）</div>
+                  <div class="text-xs text-slate-400 mt-0.5">阴道使用 + 内射羞辱</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="meat_toilet" class="hidden peer">
+                <div class="peer-checked:border-amber-600 peer-checked:bg-amber-900/30 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">肉便器模式</div>
+                  <div class="text-xs text-slate-400 mt-0.5">肛交+口交+性交随机</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="record" class="hidden peer">
+                <div class="peer-checked:border-sky-500 peer-checked:bg-sky-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">强制记录</div>
+                  <div class="text-xs text-slate-400 mt-0.5">自拍/录像并发给对方</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="expose" class="hidden peer">
+                <div class="peer-checked:border-teal-500 peer-checked:bg-teal-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">暴露公开</div>
+                  <div class="text-xs text-slate-400 mt-0.5">窗边/阳台展示</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="verbal" class="hidden peer">
+                <div class="peer-checked:border-fuchsia-500 peer-checked:bg-fuchsia-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition">
+                  <div class="font-medium text-sm">语言羞辱进阶</div>
+                  <div class="text-xs text-slate-400 mt-0.5">最下贱自报 + 长篇告白</div>
+                </div>
+              </label>
+
+              <!-- 新增：通用 / 极端重口 占位卡片（未来放SM惩罚内容） -->
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="sm_general" class="hidden peer">
+                <div class="peer-checked:border-cyan-500 peer-checked:bg-cyan-900/20 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition opacity-60">
+                  <div class="font-medium text-sm">通用SM惩罚（开发中）</div>
+                  <div class="text-xs text-slate-400 mt-0.5">常规体罚 + 调教（即将支持）</div>
+                </div>
+              </label>
+              <label class="block cursor-pointer snap-start">
+                <input type="checkbox" name="punishment-styles" value="sm_extreme" class="hidden peer">
+                <div class="peer-checked:border-red-700 peer-checked:bg-red-950/30 border border-slate-600 bg-slate-900 rounded-2xl px-3 py-2.5 transition opacity-60">
+                  <div class="font-medium text-sm">极端/重口SM（开发中）</div>
+                  <div class="text-xs text-slate-400 mt-0.5">高强度极限玩法（即将支持）</div>
+                </div>
+              </label>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- 设置密码 -->
+        <div class="mb-4">
+          <label class="flex items-center gap-2 text-sm text-slate-400 mb-1.5 cursor-pointer">
+            <input type="checkbox" id="modal-has-password" class="accent-rose-600" onchange="document.getElementById('modal-password').classList.toggle('hidden', !this.checked)">
+            <span>设置密码（私人房）</span>
+          </label>
+          <input id="modal-password" type="password" placeholder="请输入密码"
+                 class="w-full bg-slate-900 border border-slate-600 rounded-2xl px-3 py-2 text-sm focus:outline-none focus:border-slate-500 hidden">
+        </div>
+
+      </div> <!-- 结束可滚动内容区 -->
+
+      <!-- 底部按钮（卡牌 footer） -->
+      <div class="flex gap-3 px-6 pt-4 pb-4 flex-shrink-0 bg-slate-800 border-t border-slate-700 rounded-b-3xl"
+           style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px))">
+        <button onclick="hideCreateModal()"
+                class="flex-1 py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 active:bg-slate-800 text-sm font-medium">取消</button>
+        <button onclick="confirmCreateTable()"
+                class="flex-1 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 active:bg-rose-700 text-sm font-semibold">创建桌子</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Changelog Modal (手机优化) -->
+  <div id="changelog-modal" class="hidden fixed inset-0 bg-black/70 z-[120] flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-[95vw] sm:max-w-2xl max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between p-3 sm:p-4 border-b border-slate-700">
+        <div class="font-semibold text-base sm:text-lg">更新日志</div>
+        <button onclick="hideChangelog()" class="text-slate-400 hover:text-white text-2xl leading-none px-2">&times;</button>
+      </div>
+      <div id="changelog-content" class="flex-1 overflow-auto p-3 sm:p-4 text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words bg-slate-900 rounded-b-3xl font-mono">
+        加载中...
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="fixed bottom-4 right-4 space-y-2 z-[100]"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // ==================== 全局错误捕获（强烈建议打开控制台看红色错误） ====================
+    window.addEventListener('error', function(e) {
+      console.error('【全局JS错误】', e.message, 'at', e.filename + ':' + e.lineno);
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('【未捕获Promise错误】', e.reason);
+    });
+
+    // ============== CLIENT STATE ==============
+    let socket = null;
+    let myGuestId = localStorage.getItem('cjb_guestId') || '';
+    let myNickname = localStorage.getItem('cjb_nickname') || '';
+    let myNameBattleEnabled = false;  // 名字争夺战状态
+    let myNameBattleScore = 0;
+    let myNameBattlePrefix = '';
+    let myNameBattleCode = '';
+    let myNameBattleQuitLockUntil = 0; // 退出名字争夺战后的改名锁定截止时间戳
+    let currentTable = null;          // full table object from server
+    let myRecentMatches = [];         // local memory of my games
+    let currentRoomId = null;
+    let lastFeedbackTs = 0;           // 客户端反馈冷却时间戳（1分钟）
+    let lobbyTables = [];             // 当前大厅所有桌子数据（用于快速匹配等）
+
+    // ==================== 性别图标（必须最早定义） ====================
+    const GENDER_ICONS = {
+      'male': { label: '男', bg: 'bg-blue-600', text: 'text-white' },
+      'female': { label: '女', bg: 'bg-pink-600', text: 'text-white' },
+      'femboy': { label: '男娘', bg: 'bg-purple-600', text: 'text-white' }
+    };
+
+    // 每个具体性别标识的独立颜色（全称显示）
+    const GENDER_BADGE_STYLES = {
+      '男性': { bg: 'bg-blue-600', text: 'text-white' },
+      '女性': { bg: 'bg-pink-600', text: 'text-white' },
+      '男娘': { bg: 'bg-purple-600', text: 'text-white' },
+      'TS': { bg: 'bg-indigo-600', text: 'text-white' },
+      '药娘': { bg: 'bg-rose-500', text: 'text-white' },
+      'CD': { bg: 'bg-sky-600', text: 'text-white' },
+      '武装直升机': { bg: 'bg-orange-600', text: 'text-white' },
+      '沃尔玛购物袋': { bg: 'bg-lime-600', text: 'text-white' }
+    };
+
+    function getGenderIcon(gender, label) {
+      // 优先使用具体标签的颜色
+      if (label && GENDER_BADGE_STYLES[label]) {
+        const s = GENDER_BADGE_STYLES[label];
+        return `<span class="gender-badge ${s.bg} ${s.text}">${label}</span>`;
+      }
+      // 否则回退到基础性别短称
+      const g = GENDER_ICONS[gender] || GENDER_ICONS['male'];
+      const display = label || g.label;
+      return `<span class="gender-badge ${g.bg} ${g.text}">${display}</span>`;
+    }
+
+    // 统一更新顶部「欢迎回来，XXX」显示（确保永远使用彩色全称性别框）
+    // 必须定义在最早的 earlyInit 之前
+    function updateWelcomeName() {
+      const el = document.getElementById('welcome-name');
+      if (!el) return;
+
+      const g = localStorage.getItem('cjb_gender') || 'male';
+      const label = localStorage.getItem('cjb_gender_label');
+
+      let prefix = myNameBattlePrefix || '';
+      let displayNick = myNickname || localStorage.getItem('cjb_nickname') || '游客';
+
+      // 极低分代号模式
+      if (myNameBattleScore <= -200 && myNameBattleCode) {
+        prefix = '';
+        displayNick = myNameBattleCode;
+      }
+
+      const prefixHtml = prefix ? `<span class="text-rose-400 font-medium">${prefix}</span> ` : '';
+      el.innerHTML = getGenderIcon(g, label) + ' ' + prefixHtml + displayNick;
+    }
+
+    // 统一名字争夺战显示（前缀 + 名字/代号）
+    function getNameBattleDisplay(p) {
+      if (!p) return '';
+      const icon = getGenderIcon(p.gender || 'male', p.genderLabel);
+      if (p.nameBattleScore <= -200 && p.nameBattleCode) {
+        return `${icon} ${p.nameBattleCode}`;
+      }
+      const pref = p.nameBattlePrefix ? `<span class="text-rose-400">${p.nameBattlePrefix}</span> ` : '';
+      return `${icon} ${pref}${p.nickname || ''}`;
+    }
+
+    // 惩罚弹窗专用：只显示称号+名字，不重复渲染性别框（避免主座位卡 + 弹窗同时出现两个性别标志）
+    function getShortDisplayName(p) {
+      if (!p) return '';
+      if (p.nameBattleScore <= -200 && p.nameBattleCode) {
+        return p.nameBattleCode;
+      }
+      const pref = p.nameBattlePrefix ? `<span class="text-rose-400">${p.nameBattlePrefix}</span> ` : '';
+      return `${pref}${p.nickname || ''}`;
+    }
+
+    // ==================== 超早期同步初始化（即使后面JS出错也能显示昵称） ====================
+    (function earlyInit() {
+      try {
+        // 使用统一函数，确保彩色全称框
+        updateWelcomeName();
+      } catch (e) {
+        console.error('earlyInit 失败', e);
+      }
+    })();
+
+    // (getGenderIcon 已提前定义在上面，防止初始化错误)
+
+    // 中央事件委托（尽早绑定，防止 innerHTML 破坏后按钮失效）
+    document.addEventListener('click', function(ev) {
+      const target = ev.target.closest('[data-action]');
+      if (!target) return;
+
+      const action = target.dataset.action;
+
+      if (action === 'make-move') {
+        const choice = target.dataset.choice;
+        if (choice && typeof makeMove === 'function') makeMove(choice);
+      }
+      if (action === 'show-create-modal') {
+        if (typeof showCreateTableModal === 'function') showCreateTableModal();
+      }
+      if (action === 'leave-table') {
+        if (typeof leaveTable === 'function') leaveTable();
+      }
+      if (action === 'quick-match') {
+        if (typeof quickMatch === 'function') quickMatch();
+      }
+    });
+
+    // ============== INIT ==============
+    function init() {
+      try {
+        // Generate guest id if none
+        if (!myGuestId) {
+          myGuestId = 'G' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+          localStorage.setItem('cjb_guestId', myGuestId);
+        }
+        if (!myNickname) {
+          myNickname = '游客' + Math.floor(Math.random() * 900 + 100);
+          localStorage.setItem('cjb_nickname', myNickname);
+        }
+
+        // 使用统一函数（确保彩色全称性别框）
+        updateWelcomeName();
+
+        // Connect socket
+        connectSocket();
+
+        // Keyboard shortcuts hint
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) {
+          chatInput.addEventListener('focus', () => {
+            if (currentTable) {
+              const hint = document.getElementById('move-hint');
+              if (hint) hint.innerText = '';
+            }
+          });
+        }
+
+        // 留言板UI绑定（输入+发送+回车）
+        setupFeedbackUI();
+      } catch (e) {
+        console.error('init() 内部出错', e);
+      }
+    }
+
+    function connectSocket() {
+      socket = io();
+
+      socket.on('connect', () => {
+        console.log('%c[Socket] connected', 'color:#64748b');
+        // Send join lobby
+        const myGender = localStorage.getItem('cjb_gender') || 'male';
+        const myLabel = localStorage.getItem('cjb_gender_label');
+        socket.emit('join_lobby', { guestId: myGuestId, nickname: myNickname, gender: myGender, genderLabel: myLabel });
+      });
+
+      socket.on('welcome', (data) => {
+        myGuestId = data.guestId;
+        myNickname = data.nickname;
+        localStorage.setItem('cjb_guestId', myGuestId);
+        localStorage.setItem('cjb_nickname', myNickname);
+        
+        const g = data.gender || localStorage.getItem('cjb_gender') || 'male';
+        localStorage.setItem('cjb_gender', g);
+        if (data.genderLabel) {
+          localStorage.setItem('cjb_gender_label', data.genderLabel);
+        }
+        if (typeof data.nameBattleEnabled !== 'undefined') {
+          myNameBattleEnabled = !!data.nameBattleEnabled;
+        }
+        if (typeof data.nameBattleScore !== 'undefined') myNameBattleScore = data.nameBattleScore;
+        if (typeof data.nameBattlePrefix !== 'undefined') myNameBattlePrefix = data.nameBattlePrefix || '';
+        if (typeof data.nameBattleCode !== 'undefined') myNameBattleCode = data.nameBattleCode || '';
+        if (data.nameBattleQuitLockUntil) {
+          myNameBattleQuitLockUntil = data.nameBattleQuitLockUntil;
+        }
+
+        // 使用统一函数（确保彩色全称性别框）
+        updateWelcomeName();
+        
+        // Apply stats
+        updateMyStatsUI(data.stats);
+        // 个人惩罚历史（用于右侧「我的记录」融合显示）
+        if (data.stats && data.stats.punishmentHistory) {
+          window.myPunishmentHistory = data.stats.punishmentHistory;
+          // 不再调用 renderPersonalPunishmentHistory（已合并到 renderMyRecent）
+          renderMyRecent();
+        }
+      });
+
+      socket.on('lobby_update', (data) => {
+        lobbyTables = data.tables || [];
+        renderLobby(data);
+      });
+
+      // 实时收到新留言（单条追加，不等全量刷新）
+      socket.on('feedback_added', (fb) => {
+        const container = document.getElementById('feedback-list');
+        if (!container) return;
+
+        // 如果是空状态提示，先清掉
+        if (container.querySelector('.text-slate-500')) container.innerHTML = '';
+
+        const row = document.createElement('div');
+        row.className = 'flex gap-2 items-start px-1 py-0.5';
+        const time = new Date(fb.ts).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+
+        // 使用统一的名字争夺战显示（前缀/代号 + 彩色性别框），和 renderFeedbackList 保持一致
+        row.innerHTML = `
+          <span class="text-slate-400 shrink-0 tabular-nums">${time}</span>
+          <span class="shrink-0">${getNameBattleDisplay(fb)}</span>
+          <span class="text-slate-300 flex-1 min-w-0 break-words">${escapeHtml(fb.text)}</span>
+        `;
+        container.prepend(row);
+
+        // 保持最多12条
+        while (container.children.length > 12) container.lastChild.remove();
+      });
+
+      socket.on('table_joined', (table) => {
+        currentTable = table;
+        currentRoomId = table.id;
+        showTableView(table);
+        appendChatMessage({ nickname: '系统', message: '你已加入桌子', ts: Date.now() }, true);
+      });
+
+      socket.on('table_update', (partial) => {
+        if (!currentTable || currentTable.id !== partial.id) return;
+        
+        // preserve my choice across updates (server doesn't echo it to everyone)
+        const savedMyMove = currentTable.myMove;
+        
+        currentTable.playerA = partial.playerA;
+        currentTable.playerB = partial.playerB;
+        currentTable.round = partial.round;
+        currentTable.movesStatus = partial.movesStatus;
+        currentTable.chat = partial.chat || currentTable.chat;
+        
+        // 同步惩罚状态
+        if (partial.currentPunishment !== undefined) {
+          currentTable.currentPunishment = partial.currentPunishment;
+        }
+        
+        // 同步名字争夺战房间标志（table_update 现在会带上）
+        if (typeof partial.isNameBattleRoom !== 'undefined') {
+          currentTable.isNameBattleRoom = partial.isNameBattleRoom;
+        }
+        if (typeof partial.nameBattleBet !== 'undefined') {
+          currentTable.nameBattleBet = partial.nameBattleBet;
+        }
+        
+        // restore myMove if I am still seated
+        const stillMeA = partial.playerA && partial.playerA.guestId === myGuestId;
+        const stillMeB = partial.playerB && partial.playerB.guestId === myGuestId;
+        if ((stillMeA || stillMeB) && savedMyMove) {
+          currentTable.myMove = savedMyMove;
+        }
+        
+        renderTable(currentTable);
+      });
+
+      socket.on('chat_message', (msg) => {
+        appendChatMessage(msg, msg.guestId === myGuestId);
+      });
+
+      socket.on('round_result', (res) => {
+        handleRoundResult(res);
+      });
+
+      // Countdown from server (when time limit is set)
+      socket.on('time_tick', (data) => {
+        if (!currentTable || !data) return;
+        currentTable.remainingTime = data.remaining;
+        updateCountdownDisplay();
+      });
+
+      // 轮盘惩罚模式事件
+      socket.on('punishment_start', (data) => {
+        if (!currentTable || !data.punishment) return;
+        currentTable.currentPunishment = data.punishment;
+
+        // 如果结果展示动画还在进行中（banner 存在），则等 reveal 结束后再显示惩罚面板
+        const gameArea = document.querySelector('#table-view .bg-slate-800');
+        const stillRevealing = gameArea && gameArea.querySelector('.result-banner');
+
+        if (stillRevealing) {
+          // 等待 reveal 结束，renderTable + 额外保障会处理显示
+        } else {
+          showPunishmentUI(data.punishment);
+        }
+
+        // 惩罚期间禁用出拳
+        disableMoveButtons(true);
+      });
+
+      // 惩罚已无计时器（只剩完成按钮）
+      // 旧的 punishment_tick 监听已移除
+
+      socket.on('punishment_completed', (data) => {
+        if (!currentTable) return;
+
+        // 先捕获当前惩罚文字（用于本地记录）
+        const lastPunishText = currentTable.currentPunishment ? (currentTable.currentPunishment.text || '惩罚任务') : '惩罚任务';
+
+        currentTable.currentPunishment = null;
+        hidePunishmentUI();
+
+        if (data && data.isDrawPunish && data.completed) {
+          const names = data.completed.map(c => `${c.nickname}${c.emoji ? ' ' + c.emoji : ''}`).join('、');
+          showToast(`${names} 完成了平局惩罚`, 'info');
+        } else if (data && data.emoji && data.loserName) {
+          const toastText = `${data.loserName} 完成了惩罚 ${data.emoji}`;
+          showToast(toastText, 'info');
+        }
+
+        // 如果是我被罚（支持双人模式），立即本地追加
+        const wasMe = (data && data.loserName === myNickname) ||
+                      (data && data.isDrawPunish && data.completed && data.completed.some(c => c.nickname === myNickname));
+        if (wasMe) {
+          if (!window.myPunishmentHistory) window.myPunishmentHistory = [];
+          window.myPunishmentHistory.unshift({
+            ts: Date.now(),
+            text: lastPunishText || '平局惩罚',
+            emoji: (data && data.emoji) || ''
+          });
+          if (window.myPunishmentHistory.length > 10) window.myPunishmentHistory.pop();
+          renderMyRecent();
+        }
+
+        renderTable(currentTable);
+      });
+
+      // 平局惩罚中一人完成 → 实时进度
+      socket.on('punishment_progress', (data) => {
+        if (!currentTable || !data.punishment) return;
+        currentTable.currentPunishment = data.punishment;
+        showPunishmentUI(data.punishment);
+        renderTable(currentTable);
+      });
+
+      socket.on('move_status', (s) => {
+        if (!currentTable) return;
+        // just re-render to show "已出拳" for opponent
+        renderTable(currentTable);
+      });
+
+      socket.on('left_table', () => {
+        leaveTableUI();
+      });
+
+      socket.on('table_closed', () => {
+        showToast('桌子已关闭', 'info');
+        leaveTableUI();
+      });
+
+      socket.on('nickname_updated', (d) => {
+        myNickname = d.nickname;
+        const g = d.gender || localStorage.getItem('cjb_gender') || 'male';
+        localStorage.setItem('cjb_nickname', myNickname);
+        localStorage.setItem('cjb_gender', g);
+        if (d.genderLabel) {
+          localStorage.setItem('cjb_gender_label', d.genderLabel);
+        }
+        // 使用统一函数（确保彩色全称性别框）
+        updateWelcomeName();
+      });
+
+      // 名字争夺战状态更新
+      socket.on('name_battle_updated', (d) => {
+        myNameBattleEnabled = !!d.enabled;
+        if (typeof d.score !== 'undefined') myNameBattleScore = d.score;
+        if (typeof d.prefix !== 'undefined') myNameBattlePrefix = d.prefix || '';
+        if (d.code) myNameBattleCode = d.code || '';
+        if (d.quitLockUntil) {
+          myNameBattleQuitLockUntil = d.quitLockUntil;
+        }
+        if (myNameBattleQuitLockUntil && Date.now() < myNameBattleQuitLockUntil) {
+          const minutes = Math.ceil((myNameBattleQuitLockUntil - Date.now()) / 60000);
+          showToast(`名字争夺战已关闭，改名锁定中（剩余约${minutes}分钟）`, 'info');
+        }
+        updateWelcomeName();
+        // 如果正在房间内，立即刷新座位名字栏（自己的实时称号+积分）
+        if (currentTable) {
+          renderTable(currentTable);
+        }
+      });
+
+      socket.on('error_msg', (text) => {
+        showToast(text, 'error');
+      });
+
+      // Fallback reconnect
+      socket.on('disconnect', () => {
+        showToast('与服务器断开，正在重连...', 'error');
+      });
+    }
+
+    // ============== LOBBY RENDER ==============
+    function renderLobby(data) {
+      lobbyTables = data.tables || [];
+
+      // counters
+      document.getElementById('online-count').innerText = data.onlineCount || 0;
+      document.getElementById('global-online').innerText = data.onlineCount || 0;
+      document.getElementById('global-rounds').innerText = data.totalRounds || 0;
+      document.getElementById('global-tables').innerText = data.tables ? data.tables.length : 0;
+      document.getElementById('table-count').innerText = (data.tables ? data.tables.length : 0) + ' 张桌子';
+
+      // table list
+      const container = document.getElementById('table-list');
+      const empty = document.getElementById('table-list-empty');
+      container.innerHTML = '';
+
+      if (!data.tables || data.tables.length === 0) {
+        empty.classList.remove('hidden');
+      } else {
+        empty.classList.add('hidden');
+        data.tables.forEach(t => {
+          const div = document.createElement('div');
+          const full = t.seated === 2;
+          const isNB = t.isNameBattleRoom;
+          div.className = `table-card flex items-start justify-between px-3 py-2 rounded-2xl cursor-pointer border ${full ? 'bg-slate-900 border-slate-600' : 'bg-slate-900/70 border-slate-700 hover:border-rose-800'} ${isNB ? 'ring-1 ring-rose-600/60' : ''}`
+
+          const pa = t.playerA;
+          const pb = t.playerB;
+          const spec = t.spectatorCount || 0;
+          const aTxt = pa ? getNameBattleDisplay(pa) : '等待中';
+          const bTxt = pb ? getNameBattleDisplay(pb) : '等待中';
+
+          // 所有标签（名字争夺战 + 多个惩罚风格 + 平局双罚）统一放这里，支持换行
+          const styleLabels = {
+            'fantasy': '轻宠物羞辱',
+            'fantasy_medium': '中宠物羞辱',
+            'pet_heavy': '重宠物羞辱',
+            'light': '轻度SM',
+            'medium': '中度SM',
+            'heavy': '重度SM',
+            'tattoo': '纹身',
+            'blacked': '媚黑',
+            'anal': '肛交',
+            'oral': '口交',
+            'deepthroat': '深喉',
+            'edging': '寸止',
+            'sex': '性交',
+            'meat_toilet': '肉便器',
+            'record': '强制记录',
+            'expose': '暴露',
+            'verbal': '语言羞辱',
+            'nipple_loser_light': '轻乳首杂鱼',
+            'nipple_loser_medium': '中乳首杂鱼',
+            'nipple_loser_heavy': '重乳首杂鱼',
+            'motherbeast_light': '轻带锁母畜',
+            'motherbeast_medium': '中带锁母畜',
+            'motherbeast_heavy': '重带锁母畜'
+          };
+
+          const styleColors = {
+            'fantasy': 'bg-purple-800 text-purple-300',
+            'fantasy_medium': 'bg-purple-700 text-purple-200',
+            'pet_heavy': 'bg-purple-900 text-purple-100',
+            'light': 'bg-rose-800 text-rose-300',
+            'medium': 'bg-orange-800 text-orange-300',
+            'heavy': 'bg-red-800 text-red-300',
+            'tattoo': 'bg-violet-800 text-violet-300',
+            'blacked': 'bg-yellow-800 text-yellow-300',
+            'anal': 'bg-orange-800 text-orange-300',
+            'oral': 'bg-pink-800 text-pink-300',
+            'deepthroat': 'bg-rose-800 text-rose-300',
+            'edging': 'bg-violet-800 text-violet-300',
+            'sex': 'bg-red-800 text-red-300',
+            'meat_toilet': 'bg-amber-800 text-amber-300',
+            'record': 'bg-sky-800 text-sky-300',
+            'expose': 'bg-teal-800 text-teal-300',
+            'verbal': 'bg-fuchsia-800 text-fuchsia-300',
+            'nipple_loser_light': 'bg-cyan-700 text-cyan-200',
+            'nipple_loser_medium': 'bg-cyan-800 text-cyan-100',
+            'nipple_loser_heavy': 'bg-cyan-900 text-cyan-50',
+            'motherbeast_light': 'bg-sky-700 text-sky-200',
+            'motherbeast_medium': 'bg-sky-800 text-sky-100',
+            'motherbeast_heavy': 'bg-sky-900 text-sky-50'
+          };
+
+          const styles = (t.punishmentStyles && t.punishmentStyles.length > 0) ? t.punishmentStyles : (t.punishmentStyle ? [t.punishmentStyle] : []);
+          const styleBadges = styles
+            .filter(s => s && s !== 'none' && styleLabels[s])
+            .map(s => `<span class="text-[10px] px-1.5 py-px ${styleColors[s] || 'bg-slate-700 text-slate-300'} rounded">${styleLabels[s]}</span>`)
+            .join('');
+
+          const badges = [
+            t.isNameBattleRoom ? `<span class="text-[10px] px-1.5 py-px bg-rose-700 text-rose-200 rounded font-bold">争${t.nameBattleBet || 10}分</span>` : '',
+            styleBadges,
+            (t.gameSettings && t.gameSettings.punishOnDraw) ? '<span class="text-[10px] px-1.5 py-px bg-amber-800 text-amber-300 rounded">平局双罚</span>' : ''
+          ].filter(Boolean).join('');
+
+          div.innerHTML = `
+            <div class="flex items-start gap-x-3">
+              <div class="w-9 h-9 rounded-2xl flex items-center justify-center text-xl mt-0.5 ${full ? 'bg-slate-700' : 'bg-emerald-900/40'}">
+                ${full ? '🔒' : '🪑'}
+              </div>
+              <div class="min-w-0 flex-1">
+                <!-- 房间名（单独一行） -->
+                <div class="font-semibold flex items-center gap-1.5 flex-wrap">
+                  ${t.name}
+                  ${t.hasPassword ? '<span class="text-amber-400">🔒</span>' : ''}
+                </div>
+
+                <!-- 所有标签放在房间名字下面，支持自动换行 -->
+                ${badges ? `<div class="flex flex-wrap gap-1 mt-0.5">${badges}</div>` : ''}
+
+                <!-- 谁VS谁 拆成2行 -->
+                <div class="text-[10px] leading-tight text-slate-400 mt-1">
+                  <div>${aTxt} <span class="text-slate-600">vs</span> ${bTxt}</div>
+                  <div><span class="text-sky-400">👁️ ${spec} 观战</span></div>
+                </div>
+
+                <!-- 局数 + 可加入/可观战（移到左边下面） -->
+                <div class="text-xs text-slate-400 mt-0.5">
+                  第 <span class="tabular-nums">${t.round}</span> 局
+                  ${t.gameSettings && t.gameSettings.mode !== 'unlimited' ? `· ${t.gameSettings.mode}` : ''}
+                  <span class="ml-1.5 text-[10px] ${full ? 'text-rose-400' : 'text-emerald-400'}">${full ? '👁️ 可观战' : '可加入'}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 右侧只保留人数数字，状态文字已移到左下 -->
+            <div class="text-right self-start pt-0.5">
+              <div class="font-semibold tabular-nums ${full ? 'text-rose-300' : 'text-emerald-300'}">${t.seated}/2</div>
+            </div>
+          `;
+          div.onclick = () => {
+            if (t.hasPassword) {
+              const pwd = prompt('该房间已上锁，请输入密码：');
+              if (pwd === null) return;
+              joinTable(t.id, pwd);
+            } else {
+              joinTable(t.id);
+            }
+          };
+          container.appendChild(div);
+        });
+      }
+
+      // recent global matches
+      renderGlobalRecent(data.recentMatches || []);
+
+      // recent punishments in lobby
+      renderRecentPunishments(data.recentPunishments || []);
+
+      // 在线名单（排名 + 胜率 + 被罚次数）
+      if (data.onlinePlayers && data.onlinePlayers.length > 0) {
+        renderOnlineList(data.onlinePlayers);
+      }
+
+      // 名字争夺战排行榜（已拆分：支配者榜 + 贱畜榜）
+      if (data.nameBattleHigh || data.nameBattleLow) {
+        renderNameBattleRanking({ high: data.nameBattleHigh || [], low: data.nameBattleLow || [] });
+      }
+
+      // 刷新右侧融合的「我的记录」（对局+被罚）
+      if (document.getElementById('my-recent')) {
+        renderMyRecent();
+      }
+
+      // 留言板
+      if (data.recentFeedbacks) {
+        renderFeedbackList(data.recentFeedbacks);
+      }
+
+      // 已融合到右侧「我的记录」面板，此处不再单独插入个人惩罚历史
+    }
+
+    function renderPersonalPunishmentHistory() {
+      const history = window.myPunishmentHistory;
+      if (!history || history.length === 0) return;
+
+      let container = document.getElementById('personal-punishment-history');
+      if (!container) {
+        const recentBox = document.querySelector('#lobby-view .bg-slate-800.border.border-slate-700.rounded-3xl.p-5');
+        if (!recentBox) return;
+        container = document.createElement('div');
+        container.id = 'personal-punishment-history';
+        container.className = 'mt-4 bg-slate-800 border border-slate-700 rounded-3xl p-4';
+        recentBox.parentNode.insertBefore(container, recentBox.nextSibling);
+      }
+
+      container.innerHTML = `
+        <div class="font-semibold text-sm mb-2 text-rose-400">🎭 我的惩罚记录</div>
+        <div class="space-y-1 text-xs">
+          ${history.slice(0, 5).map(p => {
+            const time = new Date(p.ts).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+            const emoji = p.emoji || '';
+            const punishP = {
+              gender: p.gender || 'male',
+              genderLabel: p.genderLabel || null,
+              nickname: p.name || '我',
+              nameBattlePrefix: p.nameBattlePrefix,
+              nameBattleScore: p.nameBattleScore,
+              nameBattleCode: p.nameBattleCode
+            };
+            const nameDisplay = getNameBattleDisplay(punishP);
+            return `<div class="flex justify-between text-slate-300">
+              <span>${nameDisplay} ${p.text} ${emoji}</span>
+              <span class="text-slate-500">${time}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function renderOnlineList(list) {
+      let container = document.getElementById('leaderboard');
+      if (!container) {
+        const recentBox = document.querySelector('#lobby-view .bg-slate-800.border.border-slate-700.rounded-3xl.p-5');
+        if (!recentBox) return;
+        container = document.createElement('div');
+        container.id = 'leaderboard';
+        container.className = 'mt-4 bg-slate-800 border border-slate-700 rounded-3xl p-4';
+        recentBox.parentNode.insertBefore(container, recentBox.nextSibling);
+      }
+
+      container.innerHTML = `
+        <div class="font-semibold flex items-center gap-2 mb-2">
+          <span>👥 在线名单</span>
+          <span class="text-xs text-slate-500">(${list.length}人)</span>
+        </div>
+        <div class="space-y-1 text-sm max-h-[108px] overflow-y-auto pr-1">
+          ${list.map((p, i) => `
+            <div class="flex justify-between items-center">
+              <span class="truncate">${i+1}. ${getNameBattleDisplay(p)}</span>
+              <span class="text-emerald-400 tabular-nums whitespace-nowrap">${p.wins || 0}胜${p.losses || 0}败 ${p.winProb}% <span class="text-rose-400">被罚${p.punishmentsReceived || 0}</span></span>
+            </div>
+          `).join('')}
+        </div>
+        ${list.length > 5 ? '<div class="text-[10px] text-slate-500 mt-1">前5位显示 · 向下滚动查看更多</div>' : ''}
+      `;
+    }
+
+    function renderNameBattleRanking(data) {
+      const high = (data && data.high) || [];
+      const low = (data && data.low) || [];
+      let container = document.getElementById('name-battle-ranking');
+      if (!container) {
+        const recentBox = document.querySelector('#lobby-view .bg-slate-800.border.border-slate-700.rounded-3xl.p-5');
+        if (!recentBox) return;
+        container = document.createElement('div');
+        container.id = 'name-battle-ranking';
+        container.className = 'mt-4 bg-slate-800 border border-rose-700/60 rounded-3xl p-4';
+        recentBox.parentNode.insertBefore(container, recentBox.nextSibling);
+      }
+
+      const highHTML = high.length > 0 ? `
+        <div class="mb-3">
+          <div class="font-semibold flex items-center gap-2 mb-1.5 text-emerald-300">
+            <span>👑 支配者排行榜</span>
+            <span class="text-[10px] text-slate-500">(${high.length}人)</span>
+          </div>
+          <div class="space-y-1 text-sm">
+            ${high.map((p, i) => {
+              const display = getNameBattleDisplay(p);
+              const rankStyle = i === 0 ? 'text-yellow-400 font-bold' : (i === 1 ? 'text-slate-300 font-semibold' : (i === 2 ? 'text-amber-600 font-semibold' : ''));
+              return `
+                <div class="flex justify-between items-center ${rankStyle}">
+                  <span class="truncate">${i+1}. ${display}</span>
+                  <span class="text-emerald-400 tabular-nums font-medium">${p.nameBattleScore} 分</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      ` : '';
+
+      const lowHTML = low.length > 0 ? `
+        <div>
+          <div class="font-semibold flex items-center gap-2 mb-1.5 text-rose-300">
+            <span>💀 贱畜排行榜</span>
+            <span class="text-[10px] text-slate-500">(${low.length}人)</span>
+          </div>
+          <div class="space-y-1 text-sm">
+            ${low.map((p, i) => {
+              const display = getNameBattleDisplay(p);
+              const rankStyle = i === 0 ? 'text-rose-400 font-bold' : (i === 1 ? 'text-rose-300' : '');
+              return `
+                <div class="flex justify-between items-center ${rankStyle}">
+                  <span class="truncate">${i+1}. ${display}</span>
+                  <span class="text-rose-400 tabular-nums font-medium">${p.nameBattleScore} 分</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      ` : '';
+
+      container.innerHTML = `
+        ${highHTML}
+        ${lowHTML}
+        <div class="text-[10px] text-slate-500 mt-2 pt-2 border-t border-slate-700/60">含离线玩家 · ≥5分上支配者榜，≤-1分上贱畜榜，-200以下显示代号</div>
+      `;
+    }
+
+    function renderGlobalRecent(matches) {
+      const box = document.getElementById('recent-matches');
+      const empty = document.getElementById('recent-empty');
+      box.innerHTML = '';
+
+      if (!matches.length) {
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      // 聚合相同对局，避免刷屏：同一个1v1只显示一条 + 几胜几负
+      const groups = {};
+      matches.forEach(m => {
+        const a = m.a;
+        const b = m.b;
+        const key = [a, b].sort().join('__VS__');  // 标准化对局key
+        if (!groups[key]) {
+          groups[key] = {
+            a,
+            b,
+            aGender: m.aGender,
+            aGenderLabel: m.aGenderLabel,
+            aNameBattlePrefix: m.aNameBattlePrefix,
+            aNameBattleScore: m.aNameBattleScore,
+            aNameBattleCode: m.aNameBattleCode,
+            bGender: m.bGender,
+            bGenderLabel: m.bGenderLabel,
+            bNameBattlePrefix: m.bNameBattlePrefix,
+            bNameBattleScore: m.bNameBattleScore,
+            bNameBattleCode: m.bNameBattleCode,
+            winsA: 0,
+            winsB: 0,
+            draws: 0,
+            lastTs: 0,
+            lastChoices: ''
+          };
+        }
+        const g = groups[key];
+        if (m.result === '平局') {
+          g.draws++;
+        } else if (m.result.includes(a)) {
+          g.winsA++;
+        } else {
+          g.winsB++;
+        }
+        if (m.ts > g.lastTs) {
+          g.lastTs = m.ts;
+          g.lastChoices = `${m.aChoice} vs ${m.bChoice}`;
+        }
+      });
+
+      // 转为数组并按最近对局时间排序
+      const aggregated = Object.values(groups).sort((x, y) => y.lastTs - x.lastTs);
+
+      aggregated.forEach(g => {
+        const row = document.createElement('div');
+        row.className = `match-row flex items-center justify-between px-3 py-1.5 rounded-xl text-xs`;
+
+        const time = new Date(g.lastTs).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+
+        const aP = { 
+          gender: g.aGender, genderLabel: g.aGenderLabel, 
+          nickname: g.a, 
+          nameBattlePrefix: g.aNameBattlePrefix, 
+          nameBattleScore: g.aNameBattleScore, 
+          nameBattleCode: g.aNameBattleCode 
+        };
+        const bP = { 
+          gender: g.bGender, genderLabel: g.bGenderLabel, 
+          nickname: g.b, 
+          nameBattlePrefix: g.bNameBattlePrefix, 
+          nameBattleScore: g.bNameBattleScore, 
+          nameBattleCode: g.bNameBattleCode 
+        };
+
+        const recordText = `${g.winsA}胜${g.winsB}负${g.draws > 0 ? g.draws + '平' : ''}`;
+
+        row.innerHTML = `
+          <div class="flex items-center gap-x-2 min-w-0">
+            <span class="font-medium text-slate-300">${getNameBattleDisplay(aP)}</span>
+            <span class="text-slate-400">vs</span>
+            <span class="font-medium text-slate-300">${getNameBattleDisplay(bP)}</span>
+          </div>
+          <div class="flex items-center gap-x-2 text-right text-xs">
+            <span class="font-medium text-emerald-300">${recordText}</span>
+            <span class="text-slate-500 ml-1">${time}</span>
+          </div>
+        `;
+        box.appendChild(row);
+      });
+    }
+
+    function renderRecentPunishments(punishments) {
+      let container = document.getElementById('recent-punishments');
+      if (!container) {
+        const recentBox = document.querySelector('#lobby-view .bg-slate-800.border.border-slate-700.rounded-3xl.p-5');
+        if (!recentBox) return;
+        container = document.createElement('div');
+        container.id = 'recent-punishments';
+        container.className = 'mt-4 bg-slate-800 border border-slate-700 rounded-3xl p-4';
+        recentBox.parentNode.insertBefore(container, recentBox.nextSibling);
+      }
+
+      if (!punishments.length) {
+        container.style.display = 'none';
+        return;
+      }
+      container.style.display = 'block';
+
+      container.innerHTML = `
+        <div class="font-semibold flex items-center gap-2 mb-2">
+          <span>🎲 最近被惩罚</span>
+        </div>
+        <div class="space-y-1 text-sm">
+          ${punishments.map(p => {
+            const time = new Date(p.ts).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+            const emoji = p.emoji ? p.emoji : '';
+            const punishDisplay = getNameBattleDisplay({ 
+              gender: p.gender, 
+              genderLabel: p.genderLabel, 
+              nickname: p.name, 
+              nameBattlePrefix: p.nameBattlePrefix, 
+              nameBattleScore: p.nameBattleScore, 
+              nameBattleCode: p.nameBattleCode 
+            });
+            return `<div class="flex justify-between text-slate-300">
+              <span><span class="font-medium">${punishDisplay}</span> <span class="text-rose-400">被惩罚了</span> ${emoji}</span>
+              <span class="text-slate-500">${time}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function updateMyStatsUI(stats) {
+      if (!stats) return;
+      document.getElementById('my-wins').innerText = stats.wins || 0;
+      document.getElementById('my-losses').innerText = stats.losses || 0;
+      document.getElementById('my-draws').innerText = stats.draws || 0;
+
+      const punEl = document.getElementById('my-punishments');
+      if (punEl) punEl.innerText = stats.punishmentsReceived || 0;
+
+      // 个人惩罚历史（简单显示在控制台或可扩展为面板）
+      if (stats.punishmentHistory && stats.punishmentHistory.length > 0) {
+        window.myPunishmentHistory = stats.punishmentHistory; // 方便调试/扩展
+      }
+    }
+
+    // ============== TABLE VIEW ==============
+    function showTableView(table) {
+      document.getElementById('lobby-view').classList.add('hidden');
+      document.getElementById('table-view').classList.remove('hidden');
+      
+      document.getElementById('chat-messages').innerHTML = '';
+      document.getElementById('round-history').innerHTML = '';
+      
+      // render initial chat
+      if (table.chat && table.chat.length) {
+        table.chat.forEach(msg => appendChatMessage(msg, msg.guestId === myGuestId));
+      }
+      
+      renderTable(table);
+    }
+
+    function renderTable(table) {
+      currentTable = table;
+
+      // title：名字 + 标签放下面（避免太长挤一行）
+      const titleEl = document.getElementById('table-title');
+      let titleHTML = `<span class="font-semibold">${table.name}</span>`;
+      if (table.isNameBattleRoom) {
+        titleHTML += `<div class="mt-0.5"><span class="text-xs px-2 py-0.5 bg-rose-700 text-rose-200 rounded">名字争夺战 · ${table.nameBattleBet || 0}分</span></div>`;
+      }
+      titleEl.innerHTML = titleHTML;
+
+      // round (时限设置已移除，固定无限制)
+      document.getElementById('current-round').innerText = table.round || 1;
+      const roundBadge = document.getElementById('table-round-badge');
+      roundBadge.title = '无出拳时限（默认）';
+
+      // Player A
+      const aCard = document.getElementById('player-a-card');
+      const aName = document.getElementById('player-a-name');
+      const aScore = document.getElementById('player-a-score');
+      const aChoice = document.getElementById('player-a-choice');
+      const aStatus = document.getElementById('player-a-status');
+
+      // 名字争夺战房间：未开启者无法上桌
+      if (table.isNameBattleRoom && !myNameBattleEnabled) {
+        aCard.style.cursor = 'not-allowed';
+        aCard.onclick = () => showToast('你未开启名字争夺战，无法上桌，仅可观战', 'info');
+      } else if (!table.playerA) {
+        aCard.style.cursor = 'pointer';
+        aCard.onclick = () => {
+          if (socket && currentTable) {
+            socket.emit('take_seat', { tableId: currentTable.id, seat: 'A' });
+          }
+        };
+      } else {
+        aCard.style.cursor = '';
+        aCard.onclick = null;
+      }
+
+      if (table.playerA) {
+        const a = table.playerA;
+        
+        const isMeA = a.guestId === myGuestId;
+        let aForDisplay = a;
+        if (isMeA) {
+          // 自己的名字栏使用本地最新战斗状态，确保实时显示称号和积分
+          aForDisplay = {
+            ...a,
+            nameBattlePrefix: myNameBattlePrefix || a.nameBattlePrefix || '',
+            nameBattleScore: (typeof myNameBattleScore === 'number' ? myNameBattleScore : a.nameBattleScore),
+            nameBattleCode: myNameBattleCode || a.nameBattleCode || '',
+            gender: a.gender || localStorage.getItem('cjb_gender') || 'male',
+            genderLabel: a.genderLabel || localStorage.getItem('cjb_gender_label') || null
+          };
+        }
+        
+        let aDisplayHTML;
+        if (table.isNameBattleRoom) {
+          // 在名字争夺战房间，完整显示 性别+称号+名字/代号 + 实时积分
+          aDisplayHTML = getNameBattleDisplay(aForDisplay);
+          if (typeof aForDisplay.nameBattleScore === 'number') {
+            aDisplayHTML += ` <span class="text-[10px] text-amber-400">(${aForDisplay.nameBattleScore}分)</span>`;
+          }
+        } else {
+          // 普通房间也走统一显示（支持 -200 以下只显示代号，不泄露真名；同时显示前缀如果有）
+          aDisplayHTML = getNameBattleDisplay(aForDisplay);
+        }
+        aName.innerHTML = aDisplayHTML;
+        aScore.innerText = a.score || 0;
+
+        const isMe = a.guestId === myGuestId;
+        if (isMe) aName.classList.add('text-emerald-300'); else aName.classList.remove('text-emerald-300');
+
+        const aMoved = table.movesStatus && table.movesStatus.A;
+        if (aMoved) {
+          if (table.myMove && isMe) {
+            aChoice.innerHTML = `<span class="text-6xl">${getEmoji(table.myMove)}</span>`;
+          } else {
+            aChoice.innerHTML = `
+              <span class="inline-flex items-center gap-1 text-emerald-400">
+                <span class="text-xl">✅</span>
+                <span class="text-xs font-medium">已出拳</span>
+              </span>
+            `;
+          }
+        } else {
+          aChoice.innerHTML = `<span class="text-sm text-slate-500">等待出拳</span>`;
+        }
+        aStatus.innerHTML = isMe ? '<span class="text-emerald-400">你</span>' : '';
+      } else {
+        aName.innerText = '等待加入...';
+        aScore.innerText = '0';
+        aChoice.innerHTML = `<span class="text-sm text-slate-500">—</span>`;
+        aStatus.innerHTML = '';
+      }
+
+      // Player B
+      const bCard = document.getElementById('player-b-card');
+      const bName = document.getElementById('player-b-name');
+      const bScore = document.getElementById('player-b-score');
+      const bChoice = document.getElementById('player-b-choice');
+      const bStatus = document.getElementById('player-b-status');
+
+      // 名字争夺战房间：未开启者无法上桌
+      if (table.isNameBattleRoom && !myNameBattleEnabled) {
+        bCard.style.cursor = 'not-allowed';
+        bCard.onclick = () => showToast('你未开启名字争夺战，无法上桌，仅可观战', 'info');
+      } else if (!table.playerB) {
+        bCard.style.cursor = 'pointer';
+        bCard.onclick = () => {
+          if (socket && currentTable) {
+            socket.emit('take_seat', { tableId: currentTable.id, seat: 'B' });
+          }
+        };
+      } else {
+        bCard.style.cursor = '';
+        bCard.onclick = null;
+      }
+
+      if (table.playerB) {
+        const b = table.playerB;
+        
+        const isMeB = b.guestId === myGuestId;
+        let bForDisplay = b;
+        if (isMeB) {
+          // 自己的名字栏使用本地最新战斗状态，确保实时显示称号和积分（与A座对称）
+          bForDisplay = {
+            ...b,
+            nameBattlePrefix: myNameBattlePrefix || b.nameBattlePrefix || '',
+            nameBattleScore: (typeof myNameBattleScore === 'number' ? myNameBattleScore : b.nameBattleScore),
+            nameBattleCode: myNameBattleCode || b.nameBattleCode || '',
+            gender: b.gender || localStorage.getItem('cjb_gender') || 'male',
+            genderLabel: b.genderLabel || localStorage.getItem('cjb_gender_label') || null
+          };
+        }
+        
+        let bDisplayHTML;
+        if (table.isNameBattleRoom) {
+          // 在名字争夺战房间，完整显示 性别+称号+名字/代号 + 实时积分
+          bDisplayHTML = getNameBattleDisplay(bForDisplay);
+          if (typeof bForDisplay.nameBattleScore === 'number') {
+            bDisplayHTML += ` <span class="text-[10px] text-amber-400">(${bForDisplay.nameBattleScore}分)</span>`;
+          }
+        } else {
+          // 普通房间也走统一显示（支持 -200 以下只显示代号，不泄露真名；同时显示前缀如果有）
+          bDisplayHTML = getNameBattleDisplay(bForDisplay);
+        }
+        bName.innerHTML = bDisplayHTML;
+        bScore.innerText = b.score || 0;
+
+        const isMe = b.guestId === myGuestId;
+        if (isMe) bName.classList.add('text-rose-300'); else bName.classList.remove('text-rose-300');
+
+        const bMoved = table.movesStatus && table.movesStatus.B;
+        if (bMoved) {
+          if (table.myMove && isMe) {
+            bChoice.innerHTML = `<span class="text-6xl">${getEmoji(table.myMove)}</span>`;
+          } else {
+            bChoice.innerHTML = `
+              <span class="inline-flex items-center gap-1 text-emerald-400">
+                <span class="text-xl">✅</span>
+                <span class="text-xs font-medium">已出拳</span>
+              </span>
+            `;
+          }
+        } else {
+          bChoice.innerHTML = `<span class="text-sm text-slate-500">等待出拳</span>`;
+        }
+        bStatus.innerHTML = isMe ? '<span class="text-rose-400">你</span>' : '';
+      } else {
+        bName.innerText = '等待加入...';
+        bScore.innerText = '0';
+        bChoice.innerHTML = `<span class="text-sm text-slate-500">—</span>`;
+        bStatus.innerHTML = '';
+      }
+
+      // Hint
+      const hint = document.getElementById('move-hint');
+      const seated = (table.playerA ? 1 : 0) + (table.playerB ? 1 : 0);
+      
+      if (seated < 2) {
+        hint.innerHTML = `<span class="text-amber-400">等待第二位玩家加入...</span>`;
+        disableMoveButtons(true);
+      } else {
+        const iAmSeated = (table.playerA && table.playerA.guestId === myGuestId) || 
+                          (table.playerB && table.playerB.guestId === myGuestId);
+        
+        if (!iAmSeated) {
+          hint.innerHTML = `<span class="text-slate-400">你正在旁观（仅聊天）</span>`;
+          disableMoveButtons(true);
+        } else {
+          const myId = myGuestId;
+          const iMoved = (table.playerA && table.playerA.guestId === myId && table.movesStatus?.A) ||
+                         (table.playerB && table.playerB.guestId === myId && table.movesStatus?.B);
+          
+          if (iMoved) {
+            hint.innerHTML = `<span class="text-emerald-400">等待对手出拳...</span>`;
+          } else {
+            hint.innerHTML = `<span class="text-white">点击手势出拳</span>`;
+          }
+          disableMoveButtons(iMoved);
+        }
+      }
+
+      // chat count
+      document.getElementById('chat-count').innerText = (table.chat || []).length;
+      updateMobileChatBadge();
+
+      // Refresh countdown if time limit is active
+      updateCountdownDisplay();
+
+      // 轮盘惩罚模式处理
+      const punishPanel = document.getElementById('punishment-panel');
+      if (table.currentPunishment) {
+        // 显示惩罚面板
+        showPunishmentUI(table.currentPunishment);
+      } else {
+        if (punishPanel) punishPanel.classList.add('hidden');
+      }
+
+      // 简洁的观众状态（移动端干净版）
+      const specStatus = document.getElementById('spectator-status');
+      if (specStatus) {
+        const isSeated = (table.playerA && table.playerA.guestId === myGuestId) ||
+                         (table.playerB && table.playerB.guestId === myGuestId);
+        specStatus.classList.toggle('hidden', isSeated);
+      }
+
+      // 惩罚风格标识（房间内持久显示多个风格，和大厅保持一致）
+      const styleBadge = document.getElementById('punishment-style-badge');
+      if (styleBadge) {
+        const styles = (table.punishmentStyles && table.punishmentStyles.length > 0) 
+          ? table.punishmentStyles 
+          : (table.punishmentStyle ? [table.punishmentStyle] : []);
+
+        const labelMap = {
+          'fantasy': '轻度 聊天室宠物羞辱 v1.0',
+          'fantasy_medium': '中度 聊天室宠物羞辱 v1.0',
+          'pet_heavy': '重度 聊天室宠物羞辱 v1.0',
+          'light': '轻度SM',
+          'medium': '中度SM',
+          'heavy': '重度SM',
+          'tattoo': '纹身',
+          'blacked': '媚黑',
+          'anal': '肛交',
+          'oral': '口交',
+          'deepthroat': '深喉',
+          'edging': '寸止',
+          'sex': '性交',
+          'meat_toilet': '肉便器',
+          'record': '强制记录',
+          'expose': '暴露',
+          'verbal': '语言羞辱',
+          'nipple_loser_light': '轻度 乳首杂鱼高潮',
+          'nipple_loser_medium': '中度 乳首杂鱼高潮',
+          'nipple_loser_heavy': '重度 乳首杂鱼高潮',
+          'motherbeast_light': '轻度 带锁母畜禁欲',
+          'motherbeast_medium': '中度 带锁母畜禁欲',
+          'motherbeast_heavy': '重度 带锁母畜禁欲'
+        };
+
+        const colorMap = {
+          'fantasy': 'bg-purple-800 text-purple-300',
+          'fantasy_medium': 'bg-purple-700 text-purple-200',
+          'pet_heavy': 'bg-purple-900 text-purple-100',
+          'light': 'bg-rose-800 text-rose-300',
+          'medium': 'bg-orange-800 text-orange-300',
+          'heavy': 'bg-red-800 text-red-300',
+          'tattoo': 'bg-violet-800 text-violet-300',
+          'blacked': 'bg-yellow-800 text-yellow-300',
+          'anal': 'bg-orange-800 text-orange-300',
+          'oral': 'bg-pink-800 text-pink-300',
+          'deepthroat': 'bg-rose-800 text-rose-300',
+          'edging': 'bg-violet-800 text-violet-300',
+          'sex': 'bg-red-800 text-red-300',
+          'meat_toilet': 'bg-amber-800 text-amber-300',
+          'record': 'bg-sky-800 text-sky-300',
+          'expose': 'bg-teal-800 text-teal-300',
+          'verbal': 'bg-fuchsia-800 text-fuchsia-300',
+          'nipple_loser_light': 'bg-cyan-700 text-cyan-200',
+          'nipple_loser_medium': 'bg-cyan-800 text-cyan-100',
+          'nipple_loser_heavy': 'bg-cyan-900 text-cyan-50',
+          'motherbeast_light': 'bg-sky-800 text-sky-300',
+          'motherbeast_medium': 'bg-sky-700 text-sky-200',
+          'motherbeast_heavy': 'bg-sky-900 text-sky-100'
+        };
+
+        if (styles.length === 0 || styles.every(s => s === 'none')) {
+          styleBadge.classList.add('hidden');
+          styleBadge.innerHTML = '';
+        } else {
+          const badgeHtml = styles
+            .filter(s => s && s !== 'none')
+            .map(s => {
+              const label = labelMap[s] || s;
+              const colors = colorMap[s] || 'bg-slate-700 text-slate-300';
+              return `<span class="text-[10px] px-1.5 py-0.5 ${colors} rounded mr-1">${label}</span>`;
+            })
+            .join('');
+
+          styleBadge.className = `text-xs flex flex-wrap items-center gap-1 ml-2`;
+          styleBadge.innerHTML = badgeHtml;
+          styleBadge.classList.remove('hidden');
+        }
+      }
+
+      // 平局双罚标识（房间内持久显示）
+      const drawBadge = document.getElementById('draw-punish-badge');
+      if (drawBadge) {
+        const showDraw = !!(table.gameSettings && table.gameSettings.punishOnDraw);
+        if (showDraw) {
+          drawBadge.classList.remove('hidden');
+        } else {
+          drawBadge.classList.add('hidden');
+        }
+      }
+    }
+
+    function getEmoji(choice) {
+      if (choice === 'chui') return '✊';
+      if (choice === 'jian') return '✌️';
+      if (choice === 'bu') return '🖐️';
+      return '?';
+    }
+
+    // 倒计时功能已完全移除（无时限），此函数保留为空以防旧代码调用
+    function updateCountdownDisplay() {
+      // 已废弃
+    }
+
+    // ========== 轮盘惩罚 UI 控制 ==========
+    const MOOD_EMOJIS = ['😭', '😂', '🥵', '😳', '😈', '🙇', '😏', '😢', '😚', '🤤'];
+
+    function showPunishmentUI(punishment) {
+      const panel = document.getElementById('punishment-panel');
+      if (!panel || !punishment) return;
+
+      const singleBox = document.getElementById('punishment-single');
+      const dualBox = document.getElementById('punishment-dual');
+      const titleEl = document.getElementById('punishment-title');
+      const btn = document.getElementById('punishment-complete-btn');
+      const waiting = document.getElementById('punishment-waiting');
+
+      panel.classList.remove('hidden');
+      panel.classList.add('block');
+      disableMoveButtons(true);
+
+      if (punishment.isDrawPunish && punishment.punished) {
+        // ========== 平局双方模式 ==========
+        singleBox.style.display = 'none';
+        dualBox.style.display = 'block';
+        titleEl.textContent = '平局惩罚（双方）';
+
+        // 渲染双方列表
+        const listEl = document.getElementById('punishment-dual-list');
+        listEl.innerHTML = '';
+        let iAmDone = false;
+
+        punishment.punished.forEach(p => {
+          const isMe = p.guestId === myGuestId;
+          const done = p.completed;
+          if (isMe && done) iAmDone = true;
+
+          const row = document.createElement('div');
+          row.className = `flex items-start gap-2 p-2 rounded-xl ${done ? 'bg-emerald-900/30' : 'bg-slate-800/60'}`;
+          row.innerHTML = `
+            <div class="flex-1 min-w-0">
+              <div class="font-medium ${done ? 'text-emerald-300 line-through' : 'text-white'}">
+                ${getNameBattleDisplay(p)}
+              </div>
+              <div class="text-xs mt-0.5 ${done ? 'text-emerald-400/70' : 'text-rose-200'}">${p.text}</div>
+            </div>
+            <div class="text-right text-xs shrink-0 pt-0.5">
+              ${done ? '✅ 已完成' : (isMe ? '<span class="text-amber-300">待你完成</span>' : '等待中')}
+            </div>
+          `;
+          listEl.appendChild(row);
+        });
+
+        // 按钮逻辑：只有我还没完成时才显示按钮
+        const myEntry = punishment.punished.find(p => p.guestId === myGuestId);
+        const myNotDone = myEntry && !myEntry.completed;
+
+        if (myNotDone) {
+          btn.style.display = 'block';
+          waiting.style.display = 'none';
+        } else {
+          btn.style.display = 'none';
+          waiting.style.display = 'block';
+          waiting.innerHTML = `<div class="text-sm text-emerald-300">你已完成，等待另一人...</div>`;
+        }
+      } else {
+        // ========== 传统单人惩罚 ==========
+        singleBox.style.display = 'block';
+        dualBox.style.display = 'none';
+        titleEl.textContent = '轮盘惩罚';
+
+        const textEl = document.getElementById('punishment-text');
+        const loserEl = document.getElementById('punishment-loser');
+
+        textEl.textContent = punishment.text;
+        const loserP = {
+          gender: punishment.loserGender,
+          genderLabel: punishment.loserGenderLabel,
+          nickname: punishment.loserNickname,
+          nameBattlePrefix: punishment.loserNameBattlePrefix,
+          nameBattleScore: punishment.loserNameBattleScore,
+          nameBattleCode: punishment.loserNameBattleCode
+        };
+        loserEl.innerHTML = `需要完成的人：${getShortDisplayName(loserP)}`;
+
+        const iAmLoser = punishment.loserGuestId === myGuestId;
+
+        if (iAmLoser) {
+          btn.style.display = 'block';
+          waiting.style.display = 'none';
+        } else {
+          btn.style.display = 'none';
+          waiting.style.display = 'block';
+          waiting.innerHTML = `<div class="text-sm text-rose-300 mb-1">对方正在接受惩罚...</div><div class="text-xs text-rose-400/70">请耐心等待对方完成并按按钮</div>`;
+        }
+      }
+    }
+
+    function hidePunishmentUI() {
+      const panel = document.getElementById('punishment-panel');
+      if (panel) {
+        panel.classList.remove('block');
+        panel.classList.add('hidden');
+
+        // 重置双人/单人显示状态
+        const singleBox = document.getElementById('punishment-single');
+        const dualBox = document.getElementById('punishment-dual');
+        const waiting = document.getElementById('punishment-waiting');
+        if (singleBox) singleBox.style.display = 'block';
+        if (dualBox) dualBox.style.display = 'none';
+        if (waiting) waiting.innerHTML = `<div class="text-sm text-rose-300 mb-1">对方正在接受惩罚...</div><div class="text-xs text-rose-400/70">请耐心等待对方完成并按按钮</div>`;
+      }
+    }
+
+    function confirmPunishmentDone() {
+      if (!currentTable || !socket) return;
+      const p = currentTable.currentPunishment;
+      if (!p) return;
+
+      // 双人模式：只要我是受罚者之一且还没完成即可
+      if (p.isDrawPunish && p.punished) {
+        const myEntry = p.punished.find(x => x.guestId === myGuestId);
+        if (!myEntry || myEntry.completed) {
+          showToast('你已经完成或不是受罚者', 'error');
+          return;
+        }
+      } else if (p.loserGuestId !== myGuestId) {
+        showToast('只有本局输家才能确认完成惩罚', 'error');
+        return;
+      }
+
+      // 先显示emoji选择器
+      showEmojiPicker();
+    }
+
+    // 显示心情emoji选择器
+    function showEmojiPicker() {
+      const modal = document.getElementById('emoji-picker-modal');
+      const container = document.getElementById('emoji-options');
+      container.innerHTML = '';
+
+      MOOD_EMOJIS.forEach(emoji => {
+        const btn = document.createElement('button');
+        btn.textContent = emoji;
+        btn.className = 'text-4xl py-3 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded-2xl transition';
+        btn.onclick = () => {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+          // 发送完成 + 选择的emoji
+          socket.emit('punishment_completed', {
+            tableId: currentTable.id,
+            emoji: emoji
+          });
+        };
+        container.appendChild(btn);
+      });
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function skipEmojiSelection() {
+      const modal = document.getElementById('emoji-picker-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+
+      // 不带emoji直接完成
+      if (currentTable && socket) {
+        socket.emit('punishment_completed', {
+          tableId: currentTable.id,
+          emoji: null
+        });
+      }
+    }
+
+    // ==================== 更新日志弹窗 ====================
+    function showChangelog() {
+      const modal = document.getElementById('changelog-modal');
+      const content = document.getElementById('changelog-content');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      content.textContent = '加载中...';
+
+      fetch('/api/changelog')
+        .then(res => res.text())
+        .then(text => {
+          content.textContent = text;
+        })
+        .catch(() => {
+          content.textContent = '无法加载更新日志，请稍后再试。';
+        });
+    }
+
+    function hideChangelog() {
+      const modal = document.getElementById('changelog-modal');
+      modal.classList.remove('flex');
+      modal.classList.add('hidden');
+    }
+
+    function disableMoveButtons(disabled) {
+      document.querySelectorAll('.move-btn').forEach(btn => {
+        btn.disabled = disabled;
+        btn.style.opacity = disabled ? '0.45' : '1';
+        btn.style.cursor = disabled ? 'not-allowed' : 'pointer';
+      });
+    }
+
+    // (getGenderIcon 已提前定义在上方，防止初始化错误)
+
+
+
+
+    function handleRoundResult(res) {
+      if (!currentTable) return;
+
+      // 注意：不再在这里无条件隐藏惩罚面板，避免和 punishment_start 事件冲突
+      // 惩罚面板的显示由 punishment_start 事件和 renderTable 共同控制
+
+      // Update local table data
+      if (currentTable.playerA) currentTable.playerA.score = res.scores.A;
+      if (currentTable.playerB) currentTable.playerB.score = res.scores.B;
+      currentTable.round = (res.round || currentTable.round) + 1;
+      currentTable.movesStatus = { A: false, B: false };
+      currentTable.myMove = null;
+
+      // Show result for 2.8 seconds so players can clearly see what was played and who won
+      const gameArea = document.querySelector('#table-view .bg-slate-800');
+      gameArea.style.position = 'relative';
+
+      // Clear previous result banner if any
+      const oldBanner = gameArea.querySelector('.result-banner');
+      if (oldBanner) oldBanner.remove();
+
+      const banner = document.createElement('div');
+      banner.className = `result-banner absolute left-1/2 -translate-x-1/2 top-3 z-20 px-4 py-2 text-xs sm:text-sm rounded-3xl shadow-2xl flex flex-col items-center gap-1 ${res.result === 'draw' ? 'bg-amber-600' : 'bg-emerald-600'}`;
+      
+      const aEmoji = getEmoji(res.moveA);
+      const bEmoji = getEmoji(res.moveB);
+      
+      let resultText = '';
+      if (res.result === 'draw') {
+        resultText = `平局`;
+      } else {
+        resultText = `${res.winnerName} 获胜`;
+      }
+
+      // 结果横幅使用彩色全称性别框 + 名字争夺战前缀（必须只调用一次性别框，避免双重男娘标志）
+      const aIcon = getGenderIcon(res.aGender || 'male', res.aGenderLabel);
+      const bIcon = getGenderIcon(res.bGender || 'male', res.bGenderLabel);
+      const aP = { gender: res.aGender, genderLabel: res.aGenderLabel, nickname: res.aNickname, nameBattlePrefix: res.aNameBattlePrefix, nameBattleScore: res.aNameBattleScore, nameBattleCode: res.aNameBattleCode };
+      const bP = { gender: res.bGender, genderLabel: res.bGenderLabel, nickname: res.bNickname, nameBattlePrefix: res.bNameBattlePrefix, nameBattleScore: res.bNameBattleScore, nameBattleCode: res.bNameBattleCode };
+      banner.innerHTML = `
+        <div class="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium">
+          <span>${aIcon} ${getShortDisplayName(aP)} ${aEmoji}</span>
+          <span class="text-white/70">vs</span>
+          <span>${bEmoji} ${bIcon} ${getShortDisplayName(bP)}</span>
+        </div>
+        <div class="text-sm sm:text-base font-bold tracking-wide">${resultText}</div>
+      `;
+      
+      gameArea.appendChild(banner);
+
+      // Update displays with actual choices (keep visible during reveal)
+      document.getElementById('player-a-choice').innerHTML = `<span class="text-6xl">${aEmoji}</span>`;
+      document.getElementById('player-b-choice').innerHTML = `<span class="text-6xl">${bEmoji}</span>`;
+
+      // Disable buttons during reveal
+      disableMoveButtons(true);
+
+      // Add to local history
+      addToRoundHistory(res);
+      
+      // Save to my personal record if I was playing
+      const iPlayed = (currentTable.playerA && currentTable.playerA.guestId === myGuestId) ||
+                      (currentTable.playerB && currentTable.playerB.guestId === myGuestId);
+      if (iPlayed) {
+        const isA = res.aNickname === myNickname;
+        const oppNick = isA ? res.bNickname : res.aNickname;
+        const oppG = isA ? (res.bGender || 'male') : (res.aGender || 'male');
+        const oppGL = isA ? (res.bGenderLabel || null) : (res.aGenderLabel || null);
+        myRecentMatches.unshift({
+          ts: Date.now(),
+          opponent: oppNick,
+          opponentGender: oppG,
+          opponentGenderLabel: oppGL,
+          opponentNameBattlePrefix: isA ? res.bNameBattlePrefix : res.aNameBattlePrefix,
+          opponentNameBattleScore: isA ? res.bNameBattleScore : res.aNameBattleScore,
+          opponentNameBattleCode: isA ? res.bNameBattleCode : res.aNameBattleCode,
+          result: res.result === 'draw' ? '平' : (res.winnerName === myNickname ? '胜' : '负'),
+          myChoice: res.aNickname === myNickname ? res.moveA : res.moveB,
+          oppChoice: res.aNickname === myNickname ? res.moveB : res.moveA
+        });
+        if (myRecentMatches.length > 12) myRecentMatches.pop();
+        renderMyRecent();
+      }
+
+      // Keep the result visible for ~2.8 seconds, then prepare next round
+      setTimeout(() => {
+        if (banner.parentNode) banner.parentNode.removeChild(banner);
+
+        // 先让 renderTable 处理正常状态
+        renderTable(currentTable);
+
+        // 额外保障：如果这局有惩罚（punishment_start 可能在 reveal 期间到达），确保显示出来
+        if (currentTable.currentPunishment) {
+          showPunishmentUI(currentTable.currentPunishment);
+        }
+      }, 2800);
+    }
+
+    function addToRoundHistory(res) {
+      const box = document.getElementById('round-history');
+      const line = document.createElement('div');
+      line.className = `flex items-center justify-between text-xs px-2 py-px rounded ${res.result === 'draw' ? 'text-amber-300' : 'text-emerald-300'}`;
+      
+      const aEmoji = getEmoji(res.moveA);
+      const bEmoji = getEmoji(res.moveB);
+      const outcome = res.result === 'draw' ? '平局' : (res.winnerName + '胜');
+      
+      const aI = getGenderIcon(res.aGender || 'male', res.aGenderLabel);
+      const bI = getGenderIcon(res.bGender || 'male', res.bGenderLabel);
+      // 名字争夺战前缀
+      const aPrefix = (res.aNameBattleScore <= -200 && res.aNameBattleCode) ? res.aNameBattleCode : (res.aNameBattlePrefix || '');
+      const bPrefix = (res.bNameBattleScore <= -200 && res.bNameBattleCode) ? res.bNameBattleCode : (res.bNameBattlePrefix || '');
+      const aDisplay = (res.aNameBattleScore <= -200 && res.aNameBattleCode) ? res.aNameBattleCode : res.aNickname;
+      const bDisplay = (res.bNameBattleScore <= -200 && res.bNameBattleCode) ? res.bNameBattleCode : res.bNickname;
+
+      line.innerHTML = `
+        <span>${aI} ${aPrefix ? `<span class="text-rose-400">${aPrefix}</span> ` : ''}${aDisplay} ${aEmoji} <span class="text-slate-400">vs</span> ${bEmoji} ${bPrefix ? `<span class="text-rose-400">${bPrefix}</span> ` : ''}${bDisplay}</span>
+        <span class="font-medium">${outcome}</span>
+      `;
+      box.prepend(line);
+      
+      // keep only last 6
+      while (box.children.length > 6) box.removeChild(box.lastChild);
+    }
+
+    // 旧的 saveNickname 已废弃（现在通过「个人设定」弹窗统一处理）
+    function saveNickname() { /* deprecated */ }
+
+    function createTable() {
+      // Legacy - now using modal
+      showCreateTableModal();
+    }
+
+    // ==================== 短色情房间名（前端预览用，和后端一致） ====================
+    const ROOM_ADJ = [
+      "羞耻", "淫荡", "下贱", "变态", "禁忌", "堕落", "公开", "专属", "残酷", "极致",
+      "恶心", "肮脏", "下流", "淫贱", "无耻", "卑微", "恶劣", "猥琐", "下作", "淫靡",
+      "公共", "集体", "多人", "轮流", "免费", "随意", "无限制", "24小时", "永久"
+    ];
+    const ROOM_OBJ = [
+      "肉奴", "母狗", "精奴", "犬奴", "穴奴", "肉便", "玩物", "鸡奴",
+      "肉便器", "精液容器", "公共马桶", "泄殖腔", "精液便池", "人类垃圾", "尿道玩具",
+      "肉厕所", "精液回收站", "公共精盆", "口交专用", "后庭肉套", "子宫肉杯"
+    ];
+    const ROOM_ACT = [
+      "调教", "玩弄", "灌精", "羞辱", "榨精", "侵犯", "训练",
+      "肉便使用", "公共轮奸", "无套内射", "精液涂抹", "后庭扩张", "深喉训练",
+      "寸止折磨", "高潮禁止", "强制高潮", "体液涂鸦", "自拍记录", "暴露展示"
+    ];
+    const ROOM_PLACE = [
+      "间", "室", "房", "笼", "舍", "营", "所",
+      "交配室", "繁殖间", "肉便池", "精液厕所", "公共使用室", "肉便器营",
+      "泄殖腔舍", "调教监狱", "羞辱展厅", "永久标记室"
+    ];
+
+    // 普通战斗房间名（无惩罚风格时使用，区分18x重口房间）
+    const NORMAL_ADJ = ["激烈", "高手", "随机", "经典", "快速", "公平", "刺激", "巅峰", "对决", "竞技", "热血", "极限"];
+    const NORMAL_OBJ = ["对战", "擂台", "决斗", "对局", "挑战", "竞技", "对决", "对战"];
+    const NORMAL_PLACE = ["室", "场", "间", "厅", "区", "台", "营"];
+
+    // 惩罚风格专属词库（与后端完全一致，严格区分每个风格的专属词）
+    const STYLE_SPECIFIC_POOLS = {
+      blacked: {
+        adj: ["媚黑", "黑人专用", "BBC", "大黑屌", "非洲野兽", "黑种", "种族", "白皮肉便", "黑爹的", "黑屌奴隶", "白人劣等", "黑人繁殖", "BBC标记", "黑种献祭", "种族肉穴", "黑爹专属"],
+        obj: ["黑奴", "黑肉便器", "白母猪", "黑爹肉穴", "BBC精液容器", "黑人精巢", "种族肉便", "黑种母狗", "白皮肉便器", "黑人精盆", "黑爹专用穴", "种族交配犬", "黑屌肉套", "非洲种马的玩具", "黑人泄欲器"],
+        act: ["黑人灌精", "BBC侍奉", "种族羞辱", "黑爹调教", "黑种标记", "媚黑繁殖", "黑屌使用", "白皮献祭", "黑人轮奸", "BBC内射", "种族灭绝性交", "黑爹精液涂满全身", "黑种妊娠", "白母猪跪舔黑屌", "黑人征服"],
+        place: ["交配室", "黑人后宫", "BBC专用间", "种族调教室", "黑爹繁殖舍", "白母猪营", "黑种标记室", "黑人精液池", "种族灭绝间", "黑爹后宫", "黑人征服营"]
+      },
+      meat_toilet: {
+        adj: ["公共", "无限制", "多人", "集体", "免费", "随意使用", "24小时", "永久", "无差别", "轮流", "垃圾级", "下水道级", "公共泄欲"],
+        obj: ["肉便器", "精液便池", "公共马桶", "泄殖腔", "精液容器", "肉厕所", "人类垃圾", "尿道玩具", "精液回收站", "公共肉穴", "下水道肉便", "精液便池专用", "公共精盆"],
+        act: ["公共使用", "轮流灌精", "无套内射", "精液涂抹", "后庭扩张", "口交+肛交", "体液标记", "免费使用", "多人轮奸", "精液淋浴", "全孔使用", "垃圾处理", "下水道清洗", "公共泄欲"],
+        place: ["肉便池", "精液厕所", "公共使用间", "肉便器营", "泄殖腔舍", "精液回收站", "永久肉便室", "公共精液池", "下水道肉便间", "24小时肉便营", "公共泄欲室"]
+      },
+      expose: {
+        adj: ["暴露", "公开", "窗边", "阳台", "门口", "大庭广众", "全城", "直播", "街头", "全裸", "无遮挡", "高空", "公开献丑"],
+        obj: ["暴露母狗", "公开肉奴", "窗边肉便", "阳台精奴", "街头肉穴", "全城肉便器", "直播肉便", "高空肉穴", "公开献丑犬"],
+        act: ["暴露展示", "窗边自慰", "阳台写字", "门口告白", "直播使用", "全城巡游", "街头自拍", "高空暴露", "无遮挡使用", "全裸游街", "公开献丑"],
+        place: ["暴露间", "窗边展示室", "阳台肉便舍", "公开调教室", "街头使用营", "直播间", "高空暴露台", "全城展示营", "公开献丑室"]
+      },
+      record: {
+        adj: ["强制记录", "永久存档", "证据", "自拍", "录像", "不可删除", "全网", "云端", "备份", "流传", "耻辱档案", "永久证据"],
+        obj: ["记录肉奴", "证据母狗", "自拍精奴", "永久肉便", "耻辱证据", "全网肉穴", "云端肉便器", "耻辱档案犬"],
+        act: ["强制自拍", "录像使用", "证据标记", "永久存档", "全网流传", "云端备份", "直播录制", "耻辱视频", "全过程拍摄", "永久留证"],
+        place: ["记录室", "证据存档间", "自拍调教室", "永久标记舍", "耻辱档案室", "全网流传间", "云端肉便营", "永久证据间"]
+      },
+      verbal: {
+        adj: ["语言", "下贱告白", "自我羞辱", "详细身体", "长篇", "最下贱", "无下限", "极端自辱", "详细身体描写", "自我贬低"],
+        obj: ["告白肉奴", "羞辱母狗", "语言精奴", "自辱肉便", "下贱告白犬", "自我贬低器"],
+        act: ["自我羞辱", "详细告白", "下贱自报", "长篇身体羞辱", "最下贱表白", "无下限自辱", "详细器官描写", "极端自报家门", "自我贬低"],
+        place: ["告白间", "羞辱室", "语言调教室", "下贱告白舍", "自辱录音室", "长篇羞辱间", "自我贬低室"]
+      },
+      heavy: {
+        adj: ["重度", "残酷", "极端", "无下限", "血腥", "重口", "极致", "虐待级", "毁灭性", "无情", "残暴"],
+        obj: ["重口肉便", "极端母狗", "残酷精奴", "无下限肉穴", "虐待肉玩具", "毁灭级肉便", "残暴玩具"],
+        act: ["重度打骂", "极端姿势", "血腥羞辱", "无下限使用", "极致折磨", "虐待级使用", "毁灭性玩弄", "无情摧残", "残暴调教"],
+        place: ["重口调教室", "极端使用间", "残酷肉便营", "无下限监狱", "虐待专用室", "毁灭级调教室", "残暴折磨间"]
+      },
+      tattoo: {
+        adj: ["纹身", "永久标记", "刺青", "羞耻文字", "身体涂鸦", "耻辱刺青", "不可洗", "全身", "多部位", "永久耻辱"],
+        obj: ["纹身肉奴", "刺青母狗", "标记精奴", "身体肉便", "耻辱刺青犬", "永久文字肉穴", "耻辱画布"],
+        act: ["强制纹身", "耻辱刺青", "身体标记", "永久文字", "多部位涂鸦", "全身耻辱刺青", "不可洗标记", "耻辱刺青"],
+        place: ["纹身室", "标记间", "刺青调教室", "永久耻辱舍", "身体涂鸦营", "耻辱刺青室", "永久标记间"]
+      },
+      // 聊天室宠物羞辱 v1.0 轻度 房间名生成词库
+      fantasy: {
+        adj: ["聊天室", "公开", "宠物", "羞辱", "自辱", "贱名", "调教", "摇尾巴", "学叫", "跪姿", "宠物扮演", "信息暴露", "自报", "畜生化"],
+        obj: ["小母狗", "小公狗", "小雌犬", "母畜", "公畜", "雌畜", "聊天宠物", "自辱奴", "宠物奴", "贱畜", "信息暴露犬"],
+        act: ["公开自辱", "聊天告白", "宠物学叫", "摇尾巴表演", "信息暴露", "畜生训练", "自报家门", "跪姿展示", "宠物扮演"],
+        place: ["聊天室", "宠物舍", "羞辱间", "自报室", "调教室", "暴露台", "跪姿间", "畜生营", "宠物调教间"]
+      },
+
+      // 聊天室宠物羞辱 v1.0 中度
+      fantasy_medium: {
+        adj: ["宠物化", "精神调教", "自我暴露", "中度羞辱", "渐进畜生", "聊天室宠物", "自我物化", "过程暴露"],
+        obj: ["宠物化母畜", "精神公畜", "自我暴露雌畜", "渐进贱畜", "聊天室宠物奴", "中度物化犬"],
+        act: ["宠物化过程", "精神调教", "自我暴露", "渐进畜生化", "聊天室长篇自辱", "中度信息暴露"],
+        place: ["宠物化间", "精神调教室", "自我暴露舍", "渐进畜生营", "聊天室自辱间", "中度物化室"]
+      },
+
+      // 聊天室宠物羞辱 v1.0 重度
+      pet_heavy: {
+        adj: ["彻底", "永久", "真实姓名", "每日畜生", "完全物化", "极端自辱", "全信息暴露", "永久宠物", "彻底贱畜"],
+        obj: ["彻底母畜", "永久公畜", "真实姓名雌畜", "每日畜生", "完全物化贱畜", "极端自辱奴", "全信息暴露犬"],
+        act: ["真实姓名暴露", "每日畜生报告", "彻底物化", "永久宠物化", "全信息自报", "极端自辱告白", "畜生日常展示"],
+        place: ["彻底畜生舍", "永久宠物营", "真实姓名暴露间", "每日报告室", "完全物化间", "极端自辱舍"]
+      },
+      light: {
+        adj: ["轻度", "温柔羞辱", "可爱调教", "轻柔", "小恶作剧", "可爱肉便", "粉嫩", "可爱羞耻", "轻微"],
+        obj: ["可爱肉奴", "轻柔母狗", "羞耻玩物", "小恶作剧肉便", "粉嫩玩具", "可爱宠物"],
+        act: ["轻柔调教", "可爱羞辱", "小恶作剧使用", "温柔灌精", "可爱姿势", "轻微羞辱", "可爱命令"],
+        place: ["轻度调教室", "可爱肉便间", "羞耻小游戏室", "温柔使用舍", "粉嫩调教间", "可爱羞辱室"]
+      },
+      medium: {
+        adj: ["中度", "适中羞辱", "平衡调教", "中等强度", "半公开", "适度扩张", "进阶"],
+        obj: ["中度肉便", "平衡母狗", "适中精奴", "半公开肉穴", "中等玩具", "进阶肉便"],
+        act: ["中等强度使用", "平衡调教", "半公开羞辱", "中度灌精", "适中扩张", "半公开标记", "进阶羞辱"],
+        place: ["中度调教室", "平衡使用间", "半公开肉便营", "适中强度舍", "中等调教间", "进阶使用室"]
+      },
+      anal: {
+        adj: ["后庭", "肛门", "菊花", "直肠", "后穴", "肛交专用", "无润滑", "扩张级", "屁眼", "后门"],
+        obj: ["肛奴", "后庭肉套", "直肠肉便", "菊花精奴", "肛门肉穴", "扩张肉便器", "屁眼玩具", "后门肉便"],
+        act: ["后庭扩张", "肛交使用", "直肠灌精", "无润滑肛交", "菊花调教", "肛门标记", "屁眼开发", "后门征服"],
+        place: ["肛门使用间", "后庭扩张室", "直肠肉便舍", "菊花调教室", "肛交专用营", "屁眼开发间", "后门调教室"]
+      },
+      oral: {
+        adj: ["口腔", "嘴部", "喉穴", "吞精", "嘴奴"],
+        obj: ["口奴", "喉奴", "嘴穴玩具", "吞精容器", "口腔肉便"],
+        act: ["口腔使用", "强制口交", "喉咙侍奉", "嘴部开发", "吞精训练"],
+        place: ["口交室", "喉奴间", "吞精调教室", "嘴穴营", "口腔使用间"]
+      },
+      deepthroat: {
+        adj: ["深喉", "喉穴", "气管", "食道", "窒息"],
+        obj: ["喉奴", "深喉容器", "气管玩具", "食道肉便", "喉咙奴"],
+        act: ["深喉训练", "喉部征服", "气管扩张", "强制深喉", "食道使用"],
+        place: ["深喉室", "喉奴营", "气管调教室", "食道开发间", "窒息训练室"]
+      },
+      edging: {
+        adj: ["寸止", "边缘", "绝望", "崩坏"],
+        obj: ["寸止犬", "边缘玩具", "绝望母狗", "崩坏容器"],
+        act: ["寸止", "边缘控制", "高潮剥夺", "绝望折磨"],
+        place: ["寸止室", "边缘营", "绝望控制间", "崩坏教室"]
+      },
+      sex: {
+        adj: ["阴道", "子宫", "内射", "繁殖", "无套"],
+        obj: ["子宫肉杯", "阴道容器", "繁殖母狗", "内射玩具"],
+        act: ["无套内射", "子宫使用", "繁殖调教", "大量灌精", "子宫征服"],
+        place: ["子宫室", "繁殖调教室", "内射专用间", "阴道开发营", "子宫征服室"]
+      }
+    };
+
+    function generateNormalRoomName() {
+      const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+      const type = Math.floor(Math.random() * 5);
+      switch (type) {
+        case 0: return pick(NORMAL_ADJ) + pick(NORMAL_OBJ) + pick(NORMAL_PLACE);
+        case 1: return pick(NORMAL_OBJ) + pick(NORMAL_PLACE);
+        case 2: return pick(NORMAL_ADJ) + pick(NORMAL_PLACE);
+        case 3: return pick(["激烈", "经典", "随机"]) + pick(NORMAL_OBJ) + pick(NORMAL_PLACE);
+        default: return pick(NORMAL_ADJ) + pick(NORMAL_OBJ) + pick(NORMAL_PLACE);
+      }
+    }
+
+    function generateEroticRoomName(punishmentStyle = 'none') {
+      // 无惩罚风格时，使用普通战斗房间名（区分18x重口房间）
+      if (!punishmentStyle || punishmentStyle === 'none') {
+        return generateNormalRoomName();
+      }
+
+      const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+      const hasStyle = STYLE_SPECIFIC_POOLS[punishmentStyle];
+      const style = hasStyle ? STYLE_SPECIFIC_POOLS[punishmentStyle] : null;
+
+      const getPool = (common, styleExtra = []) => {
+        if (!style || !styleExtra.length) return common;
+        return [...common, ...styleExtra, ...styleExtra];
+      };
+
+      const adjPool = getPool(ROOM_ADJ, style?.adj);
+      const objPool = getPool(ROOM_OBJ, style?.obj);
+      const actPool = getPool(ROOM_ACT, style?.act);
+      const placePool = getPool(ROOM_PLACE, style?.place);
+
+      // 简化生成逻辑：主要使用「修饰词 + 地方」的干净结构
+      const getModifier = () => {
+        const r = Math.random();
+        if (r < 0.38) return pick(adjPool);
+        if (r < 0.72) return pick(objPool);
+        return pick(actPool);
+      };
+
+      const getPlace = () => pick(placePool);
+
+      if (style) {
+        if (Math.random() < 0.85) {
+          return getModifier() + getPlace();
+        }
+        return pick(adjPool) + pick(objPool) + "的" + getPlace();
+      }
+
+      if (Math.random() < 0.88) {
+        return getModifier() + getPlace();
+      }
+      return pick(adjPool) + pick(objPool) + "的" + getPlace();
+    }
+
+    function showCreateTableModal() {
+      const modal = document.getElementById('create-modal');
+      const nameInput = document.getElementById('modal-table-name');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+
+      // 自动填充房间名（多选时用第一个风格）
+      const getCurrentPunishmentStyles = () => {
+        return Array.from(document.querySelectorAll('input[name="punishment-styles"]:checked'))
+          .map(el => el.value)
+          .slice(0, 3);
+      };
+
+      const updateRoomName = () => {
+        const styles = getCurrentPunishmentStyles();
+        const styleForName = styles[0] || 'none';
+        nameInput.value = generateEroticRoomName(styleForName);
+      };
+
+      updateRoomName();
+
+      document.querySelectorAll('input[name="punishment-styles"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+          // 限制最多3个
+          const checked = document.querySelectorAll('input[name="punishment-styles"]:checked');
+          if (checked.length > 3) {
+            cb.checked = false;
+            showToast('最多只能选择 3 个惩罚风格', 'info');
+          }
+          updateRoomName();
+        });
+      });
+
+      // 不在移动端自动聚焦输入框，避免自动弹出键盘
+      // 用户需要修改名字时可以手动点击输入框
+      if (window.innerWidth >= 768) {
+        nameInput.focus();
+        nameInput.select();
+      }
+
+      // 名字争夺战房间选项：如果自己没开启，则禁用并提示
+      const nbCheckbox = document.getElementById('modal-name-battle-room');
+      if (nbCheckbox) {
+        const container = nbCheckbox.closest('div[style*="border-rose"]') || nbCheckbox.parentElement;
+        let note = container ? container.querySelector('.nb-disabled-note') : null;
+
+        if (!myNameBattleEnabled) {
+          nbCheckbox.disabled = true;
+          nbCheckbox.checked = false;
+          if (!note && container) {
+            note = document.createElement('div');
+            note.className = 'nb-disabled-note text-xs text-rose-400 mt-1 ml-6';
+            note.textContent = '需先在「个人设定」开启名字争夺战才能创建此类房间';
+            container.appendChild(note);
+          }
+        } else {
+          nbCheckbox.disabled = false;
+          if (note) note.remove();
+        }
+      }
+
+      // 简化版：全部风格都在通用列表里，用 checkbox 多选
+      const styleDetails = document.getElementById('punishment-style-details');
+      const styleCardsContainer = document.getElementById('punishment-style-cards');
+
+      // 强制显示所有卡片（不再按强度过滤）
+      if (styleCardsContainer) {
+        styleCardsContainer.querySelectorAll('label').forEach(label => label.style.display = '');
+      }
+
+      // 已简化：不再使用强度过滤，所有风格都在一个“通用”多选列表中。
+      // 初始时根据当前勾选的风格生成房间名（已在前面处理）
+    }
+
+    function hideCreateModal() {
+      const modal = document.getElementById('create-modal');
+      modal.classList.remove('flex');
+      modal.classList.add('hidden');
+    }
+
+    function confirmCreateTable() {
+      if (!socket || !socket.connected) {
+        showToast('服务器未连接', 'error');
+        hideCreateModal();
+        return;
+      }
+      const name = document.getElementById('modal-table-name').value.trim();
+      const gameMode = document.getElementById('modal-game-mode').value;
+      // 多选 1-3 个惩罚风格
+      const checkedStyles = Array.from(document.querySelectorAll('input[name="punishment-styles"]:checked'))
+        .map(el => el.value)
+        .slice(0, 3); // 最多3个
+      const punishmentStyles = checkedStyles.length > 0 ? checkedStyles : ['none'];
+      const hasPassword = document.getElementById('modal-has-password').checked;
+      const password = hasPassword ? (document.getElementById('modal-password').value.trim() || null) : null;
+      const punishOnDraw = document.getElementById('modal-punish-on-draw').checked;
+
+      // 名字争夺战房间参数
+      const isNameBattleRoom = document.getElementById('modal-name-battle-room').checked;
+      const nameBattleBet = isNameBattleRoom ? parseInt(document.getElementById('modal-name-battle-bet-value').value) || 10 : 0;
+
+      if (isNameBattleRoom && !myNameBattleEnabled) {
+        showToast('必须先在「个人设定」中开启名字争夺战，才能创建名字争夺战房间', 'error');
+        return;
+      }
+
+      hideCreateModal();
+
+      socket.emit('create_table', {
+        name: name || undefined,
+        timeLimit: 0,
+        punishmentStyles: punishmentStyles,   // 新多选数组
+        password: password,
+        gameSettings: { 
+          mode: gameMode,
+          punishOnDraw: punishOnDraw
+        },
+        isNameBattleRoom: isNameBattleRoom,
+        nameBattleBet: nameBattleBet
+      });
+    }
+
+    function joinTable(tableId, password = null) {
+      if (!socket || !socket.connected) return;
+
+      const table = (lobbyTables || []).find(t => t.id === tableId);
+      if (table && table.isNameBattleRoom && !myNameBattleEnabled) {
+        showToast('该房间为名字争夺战专属，你未开启名字争夺战，只能观战，无法上桌', 'info');
+        // 允许加入观战，但不会让你上桌
+      }
+
+      socket.emit('join_table', { tableId, password });
+    }
+
+    function quickMatch() {
+      if (!socket || !socket.connected) return;
+
+      let available = [];
+
+      if (myNameBattleEnabled) {
+        // 已开启名字争夺战：只匹配名字争夺战房间
+        available = (lobbyTables || []).filter(t => 
+          t.isNameBattleRoom && (t.seated || 0) < 2 && !t.hasPassword
+        );
+      } else {
+        // 未开启名字争夺战：只匹配普通房间，绝对不匹配名字争夺战房间
+        available = (lobbyTables || []).filter(t => 
+          !t.isNameBattleRoom && (t.seated || 0) < 2 && !t.hasPassword
+        );
+      }
+
+      if (available.length > 0) {
+        // 优先匹配已经有1人的房间
+        available.sort((a, b) => (b.seated || 0) - (a.seated || 0));
+        const target = available[0];
+        joinTable(target.id);
+        return;
+      }
+
+      // 没有合适房间 → 新建对应类型的房间
+      showToast('没有合适房间，帮你新建了一张桌子', 'info');
+
+      const createData = {
+        punishmentStyle: 'light',
+        gameSettings: {
+          mode: 'unlimited',
+          punishOnDraw: false
+        }
+      };
+
+      if (myNameBattleEnabled) {
+        createData.isNameBattleRoom = true;
+        createData.nameBattleBet = 10;
+      }
+
+      socket.emit('create_table', createData);
+    }
+
+    function makeMove(choice) {
+      if (!currentTable || !socket) return;
+      
+      const iAmA = currentTable.playerA && currentTable.playerA.guestId === myGuestId;
+      const iAmB = currentTable.playerB && currentTable.playerB.guestId === myGuestId;
+      if (!iAmA && !iAmB) {
+        showToast('你不是在座玩家，无法出拳', 'error');
+        return;
+      }
+
+      // optimistic lock
+      currentTable.myMove = choice;
+      renderTable(currentTable);
+
+      socket.emit('make_move', { tableId: currentTable.id, choice });
+    }
+
+    function sendChat() {
+      const input = document.getElementById('chat-input');
+      const val = input.value.trim();
+      if (!val || !currentTable || !socket) return;
+      
+      socket.emit('send_chat', { tableId: currentTable.id, message: val });
+      input.value = '';
+    }
+
+    function appendChatMessage(msg, isMine = false) {
+      const box = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      
+      const time = new Date(msg.ts || Date.now()).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+      
+      if (msg.guestId === 'system') {
+        div.className = 'text-center my-1';
+        div.innerHTML = `
+          <span class="system-msg inline-flex items-center gap-x-1.5 px-3 py-1 text-xs rounded-full bg-slate-700 border border-slate-600 text-amber-300">
+            <i class="fa-solid fa-info-circle text-amber-400"></i>
+            <span>${msg.message}</span>
+          </span>
+        `;
+      } else {
+        const align = isMine ? 'text-right' : '';
+        const bg = isMine ? 'bg-sky-600' : 'bg-slate-700';
+        div.className = `flex ${isMine ? 'justify-end' : ''}`;
+        div.innerHTML = `
+          <div class="max-w-[78%] ${align}">
+            <div class="text-[10px] text-slate-400 mb-px px-1 flex ${isMine ? 'justify-end' : ''} items-center gap-1">
+              <span class="font-medium">${getNameBattleDisplay(msg)}</span>
+              <span>${time}</span>
+            </div>
+            <div class="inline-block ${bg} text-white px-3 py-1.5 rounded-2xl text-sm leading-snug">${escapeHtml(msg.message)}</div>
+          </div>
+        `;
+      }
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+      
+      // update count if visible
+      if (currentTable) {
+        const c = document.getElementById('chat-count');
+        c.innerText = (parseInt(c.innerText) || 0) + 1;
+        updateMobileChatBadge();
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+    }
+
+    function leaveTable() {
+      if (socket && currentTable) {
+        socket.emit('leave_table');
+      }
+      leaveTableUI();
+    }
+
+    function leaveTableUI() {
+      document.getElementById('table-view').classList.add('hidden');
+      document.getElementById('lobby-view').classList.remove('hidden');
+      
+      currentTable = null;
+      currentRoomId = null;
+      
+      // clear some
+      document.getElementById('chat-messages').innerHTML = '';
+      document.getElementById('round-history').innerHTML = '';
+      
+      // close mobile chat drawer
+      const chatPanel = document.getElementById('chat-panel');
+      if (chatPanel) chatPanel.classList.remove('mobile-open');
+
+      // hide countdown
+      const cd = document.getElementById('countdown-area');
+      if (cd) cd.classList.add('hidden');
+
+      // hide punishment panel
+      const punish = document.getElementById('punishment-panel');
+      if (punish) punish.classList.add('hidden');
+
+      // hide emoji picker if open
+      const emojiModal = document.getElementById('emoji-picker-modal');
+      if (emojiModal) {
+        emojiModal.classList.remove('flex');
+        emojiModal.classList.add('hidden');
+      }
+    }
+
+    function resetTableScores() {
+      if (!currentTable || !socket) return;
+      socket.emit('reset_scores', currentTable.id);
+    }
+
+    // Mobile-only chat drawer toggle
+    function toggleMobileChat() {
+      const panel = document.getElementById('chat-panel');
+      const countEl = document.getElementById('mobile-chat-count');
+      
+      if (!panel) return;
+      
+      const isOpen = panel.classList.contains('mobile-open');
+      
+      if (isOpen) {
+        panel.classList.remove('mobile-open');
+      } else {
+        panel.classList.add('mobile-open');
+        // scroll chat to bottom when opening
+        setTimeout(() => {
+          const chatBox = document.getElementById('chat-messages');
+          if (chatBox) chatBox.scrollTop = chatBox.scrollHeight;
+        }, 50);
+      }
+      
+      // sync count badge
+      if (countEl && currentTable) {
+        countEl.textContent = (currentTable.chat || []).length;
+      }
+    }
+
+    // Keep mobile chat count in sync when messages arrive
+    function updateMobileChatBadge() {
+      const countEl = document.getElementById('mobile-chat-count');
+      const panel = document.getElementById('chat-panel');
+      if (!countEl || !currentTable) return;
+      
+      const len = (currentTable.chat || []).length;
+      countEl.textContent = len;
+      
+      // auto open on first message if closed (optional nicety)
+      if (len > 0 && panel && !panel.classList.contains('mobile-open') && window.innerWidth < 1024) {
+        // do nothing — let user decide
+      }
+    }
+
+    // ============== TOAST ==============
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = `px-4 py-2.5 rounded-2xl shadow-xl text-sm flex items-center gap-2 ${type === 'error' ? 'bg-rose-800' : 'bg-slate-700'}`;
+      el.innerHTML = `<span>${msg}</span>`;
+      container.appendChild(el);
+      
+      setTimeout(() => {
+        el.style.transition = 'all .2s';
+        el.style.opacity = '0';
+        setTimeout(() => el.parentNode && el.parentNode.removeChild(el), 180);
+      }, 2600);
+    }
+
+    function renderMyRecent() {
+      const box = document.getElementById('my-recent');
+      const empty = document.getElementById('my-recent-empty');
+      box.innerHTML = '';
+
+      // 融合：我的对局 + 我最近被罚（按时间倒序混合）
+      const punishList = (window.myPunishmentHistory || []).map(p => ({
+        type: 'punish',
+        ts: p.ts || Date.now(),
+        text: p.text || '惩罚任务',
+        emoji: p.emoji || '',
+        // 携带名字争夺战数据，用于正确显示前缀+名字 或 代号
+        name: p.name,
+        gender: p.gender,
+        genderLabel: p.genderLabel,
+        nameBattlePrefix: p.nameBattlePrefix,
+        nameBattleScore: p.nameBattleScore,
+        nameBattleCode: p.nameBattleCode
+      }));
+
+      const matchList = myRecentMatches.map(m => ({
+        type: 'match',
+        ts: m.ts || Date.now(),
+        opponent: m.opponent,
+        result: m.result,
+        myChoice: m.myChoice,
+        oppChoice: m.oppChoice
+      }));
+
+      const combined = [...matchList, ...punishList]
+        .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+        .slice(0, 5);
+
+      if (!combined.length) {
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      combined.forEach(item => {
+        const d = document.createElement('div');
+        if (item.type === 'punish') {
+          d.className = `flex items-center justify-between bg-slate-900 border border-rose-900/60 px-3 py-1.5 text-xs rounded-2xl`;
+          const time = new Date(item.ts).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+          // 使用统一显示逻辑：前缀+名字，或-200以下只显示代号
+          const punishP = {
+            gender: item.gender || 'male',
+            genderLabel: item.genderLabel || null,
+            nickname: item.name || '我',
+            nameBattlePrefix: item.nameBattlePrefix,
+            nameBattleScore: item.nameBattleScore,
+            nameBattleCode: item.nameBattleCode
+          };
+          const nameDisplay = getNameBattleDisplay(punishP);
+          d.innerHTML = `
+            <div class="flex-1 min-w-0">
+              <span class="text-rose-300">🎭 被罚</span>
+              <span class="font-medium text-slate-200 ml-1">${nameDisplay}</span>
+              <div class="text-slate-300 mt-0.5">${item.text}</div>
+            </div>
+            <div class="text-[10px] text-slate-500 ml-2">${time} ${item.emoji || ''}</div>
+          `;
+        } else {
+          d.className = `flex items-center justify-between bg-slate-900 border border-slate-700 px-3 py-2 text-xs rounded-2xl`;
+          const emoji = getEmoji(item.myChoice);
+          const resColor = item.result === '胜' ? 'text-emerald-300' : (item.result === '平' ? 'text-amber-300' : 'text-rose-300');
+          const oppP = {
+            gender: item.opponentGender,
+            genderLabel: item.opponentGenderLabel,
+            nickname: item.opponent,
+            nameBattlePrefix: item.opponentNameBattlePrefix,
+            nameBattleScore: item.opponentNameBattleScore,
+            nameBattleCode: item.opponentNameBattleCode
+          };
+          d.innerHTML = `
+            <div>
+              <span class="font-medium">vs ${getNameBattleDisplay(oppP)}</span><br>
+              <span class="font-mono">${emoji} <span class="text-slate-400">vs</span> ${getEmoji(item.oppChoice)}</span>
+            </div>
+            <div class="font-semibold ${resColor}">${item.result}</div>
+          `;
+        }
+        box.appendChild(d);
+      });
+    }
+
+    function renderFeedbackList(list) {
+      const container = document.getElementById('feedback-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!list || list.length === 0) {
+        container.innerHTML = `<div class="text-slate-500 text-center py-1">还没有留言，快来反馈第一个bug或建议吧～</div>`;
+        return;
+      }
+
+      list.forEach(fb => {
+        const row = document.createElement('div');
+        row.className = 'flex gap-2 items-start px-1 py-0.5';
+        const time = new Date(fb.ts).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+        row.innerHTML = `
+          <span class="text-slate-400 shrink-0 tabular-nums">${time}</span>
+          <span class="shrink-0">${getNameBattleDisplay(fb)}</span>
+          <span class="text-slate-300 flex-1 min-w-0 break-words">${escapeHtml(fb.text)}</span>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function setupFeedbackUI() {
+      const input = document.getElementById('feedback-input');
+      const btn = document.getElementById('feedback-send');
+      if (!input || !btn) return;
+
+      const send = () => {
+        if (!socket || !socket.connected) {
+          showToast('未连接服务器，无法发送反馈', 'error');
+          return;
+        }
+        const val = input.value.trim();
+        if (!val) return;
+
+        // 客户端双重限制
+        const now = Date.now();
+        if (now - lastFeedbackTs < 60 * 1000) {
+          showToast('反馈太频繁啦，1分钟后再来', 'error');
+          return;
+        }
+
+        socket.emit('send_feedback', { message: val });
+        lastFeedbackTs = now;
+        input.value = '';
+        showToast('反馈已发送，感谢！', 'info');
+      };
+
+      btn.onclick = send;
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          send();
+        }
+      });
+
+      // 实时字数提示（可选，简单版）
+      input.addEventListener('input', () => {
+        if (input.value.length > 28) {
+          input.style.borderColor = '#854d0e';
+        } else {
+          input.style.borderColor = '';
+        }
+      });
+    }
+
+    function refreshLobby() {
+      if (socket && socket.connected) {
+        const myGender = localStorage.getItem('cjb_gender') || 'male';
+        const myLabel = localStorage.getItem('cjb_gender_label');
+        socket.emit('join_lobby', { guestId: myGuestId, nickname: myNickname, gender: myGender, genderLabel: myLabel });
+      }
+    }
+
+    // Keyboard support: press / to focus chat when in table
+    document.addEventListener('keydown', function(e) {
+      if (e.key === '/' && currentTable && document.activeElement.id !== 'chat-input') {
+        e.preventDefault();
+        document.getElementById('chat-input').focus();
+      }
+      if (e.key.toLowerCase() === 'escape' && currentTable) {
+        leaveTable();
+      }
+    });
+
+    // Boot
+    try {
+      window.onload = () => {
+        try {
+          // 必须先起名
+          if (!localStorage.getItem('cjb_nickname')) {
+            if (typeof showNicknameModal === 'function') {
+              showNicknameModal(true); // 强制起名
+            }
+          } else {
+            if (typeof init === 'function') {
+              init();
+            }
+          }
+
+          // Show initial empty states
+          setTimeout(() => {
+            const emptyRecent = document.getElementById('recent-empty');
+            if (emptyRecent) emptyRecent.style.display = 'block';
+          }, 120);
+        } catch (e) {
+          console.error('window.onload 内部出错', e);
+        }
+      };
+    } catch (e) {
+      console.error('window.onload 赋值失败', e);
+    }
+
+    // 强制/可选起名弹窗
+    function showNicknameModal(force = false) {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4';
+      modal.innerHTML = `
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-sm p-6">
+          <div class="font-bold text-xl mb-2">欢迎来到锤子剪刀布</div>
+          <div class="text-slate-400 mb-4">请输入你的昵称（最多14字）</div>
+          
+          <input id="nickname-modal-input" 
+                 class="w-full bg-slate-900 border border-slate-600 rounded-2xl px-4 py-3 text-lg mb-3 focus:outline-none"
+                 maxlength="14" placeholder="你的昵称">
+
+          <div class="mb-4">
+            <div class="text-xs text-slate-400 mb-1.5">选择你的性别</div>
+            <div class="space-y-1 text-sm max-h-[180px] overflow-auto pr-1">
+              <label class="block cursor-pointer">
+                <input type="radio" name="gender" value="female" class="hidden peer">
+                <div class="peer-checked:bg-rose-900 peer-checked:border-rose-500 border border-slate-600 rounded-xl px-3 py-1.5 flex items-center justify-center"><span class="gender-badge bg-pink-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">女性</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="gender" value="male" checked class="hidden peer">
+                <div class="peer-checked:bg-emerald-900 peer-checked:border-emerald-500 border border-slate-600 rounded-xl px-3 py-1.5 flex items-center justify-center"><span class="gender-badge bg-blue-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">男性</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="gender" value="femboy" class="hidden peer">
+                <div class="peer-checked:bg-purple-900 peer-checked:border-purple-500 border border-slate-600 rounded-xl px-3 py-1.5 flex items-center justify-center"><span class="gender-badge bg-purple-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">男娘</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="gender" value="femboy" class="hidden peer">
+                <div class="peer-checked:bg-purple-900 peer-checked:border-purple-500 border border-slate-600 rounded-xl px-3 py-1.5 flex items-center justify-center"><span class="gender-badge bg-indigo-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">TS</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="gender" value="femboy" class="hidden peer">
+                <div class="peer-checked:bg-purple-900 peer-checked:border-purple-500 border border-slate-600 rounded-xl px-3 py-1.5 flex items-center justify-center"><span class="gender-badge bg-rose-500 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">药娘</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="gender" value="femboy" class="hidden peer">
+                <div class="peer-checked:bg-purple-900 peer-checked:border-purple-500 border border-slate-600 rounded-xl px-3 py-1.5 flex items-center justify-center"><span class="gender-badge bg-sky-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">CD</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="gender" value="male" class="hidden peer">
+                <div class="peer-checked:bg-emerald-900 peer-checked:border-emerald-500 border border-slate-600 rounded-xl px-3 py-1.5 flex items-center justify-center"><span class="gender-badge bg-orange-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">武装直升机</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="gender" value="male" class="hidden peer">
+                <div class="peer-checked:bg-emerald-900 peer-checked:border-emerald-500 border border-slate-600 rounded-xl px-3 py-1.5 flex items-center justify-center"><span class="gender-badge bg-lime-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">沃尔玛购物袋</span></div>
+              </label>
+            </div>
+          </div>
+          
+          <button id="nickname-modal-confirm"
+                  class="w-full py-3 bg-rose-600 hover:bg-rose-500 rounded-2xl font-semibold">
+            确认进入
+          </button>
+          
+          ${force ? '<div class="text-xs text-rose-400 mt-3 text-center">必须设置昵称和性别才能进入游戏</div>' : ''}
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const input = modal.querySelector('#nickname-modal-input');
+      const btn = modal.querySelector('#nickname-modal-confirm');
+
+      input.focus();
+
+      const confirm = () => {
+        const val = input.value.trim();
+        const genderRadio = modal.querySelector('input[name="gender"]:checked');
+        const gender = genderRadio ? genderRadio.value : 'male';
+        const selectedLabel = genderRadio ? genderRadio.parentElement.querySelector('div').textContent.trim() : '男性';
+
+        if (!val) {
+          input.classList.add('border-rose-500');
+          return;
+        }
+        localStorage.setItem('cjb_nickname', val);
+        localStorage.setItem('cjb_gender', gender);
+        localStorage.setItem('cjb_gender_label', selectedLabel);
+        myNickname = val;
+        document.body.removeChild(modal);
+
+        if (force) {
+          init(); // 第一次起名后初始化
+        } else {
+          if (socket && socket.connected) {
+            socket.emit('set_nickname', val);
+          }
+        }
+      };
+
+      btn.onclick = confirm;
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') confirm();
+      };
+    }
+
+    // 个人设定弹窗（新版：漂亮的卡片式修改名字+性别）
+    function showPersonalSettingsModal() {
+      const currentNick = myNickname || localStorage.getItem('cjb_nickname') || '';
+      const currentGender = localStorage.getItem('cjb_gender') || 'male';
+
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4';
+      modal.innerHTML = `
+        <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-[92vw] sm:max-w-sm flex flex-col overflow-hidden"
+             style="max-height: 92dvh; padding-bottom: env(safe-area-inset-bottom, 0px)">
+          
+          <!-- 标题 -->
+          <div class="font-bold text-lg sm:text-xl px-5 sm:px-6 pt-5 sm:pt-6 pb-3 flex-shrink-0">个人设定</div>
+          
+          <!-- 可滚动内容区（防止整体超过屏幕高度 + 底部导航栏遮挡） -->
+          <div class="flex-1 overflow-y-auto px-5 sm:px-6 space-y-4 text-sm" style="padding-bottom: 0.5rem;">
+          
+            <div class="mb-4">
+              <div class="text-xs sm:text-sm text-slate-400 mb-1">你的昵称（最多14字）</div>
+              <input id="ps-nickname-input" 
+                     class="w-full bg-slate-900 border border-slate-600 rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 text-base sm:text-lg focus:outline-none"
+                     maxlength="14" value="${currentNick}">
+            </div>
+
+            <div class="mb-5">
+              <div class="text-xs sm:text-sm text-slate-400 mb-1.5">选择你的性别</div>
+              <div class="space-y-1 text-xs sm:text-sm max-h-[200px] overflow-auto pr-1">
+              <label class="block cursor-pointer">
+                <input type="radio" name="ps-gender" value="female" ${currentGender === 'female' ? 'checked' : ''} class="hidden peer">
+                <div class="peer-checked:bg-rose-900 peer-checked:border-rose-500 border border-slate-600 rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 flex items-center justify-center"><span class="gender-badge bg-pink-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">女性</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="ps-gender" value="male" ${currentGender === 'male' ? 'checked' : ''} class="hidden peer">
+                <div class="peer-checked:bg-emerald-900 peer-checked:border-emerald-500 border border-slate-600 rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 flex items-center justify-center"><span class="gender-badge bg-blue-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">男性</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="ps-gender" value="femboy" ${currentGender === 'femboy' ? 'checked' : ''} class="hidden peer">
+                <div class="peer-checked:bg-purple-900 peer-checked:border-purple-500 border border-slate-600 rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 flex items-center justify-center"><span class="gender-badge bg-purple-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">男娘</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="ps-gender" value="femboy" class="hidden peer">
+                <div class="peer-checked:bg-purple-900 peer-checked:border-purple-500 border border-slate-600 rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 flex items-center justify-center"><span class="gender-badge bg-indigo-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">TS</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="ps-gender" value="femboy" class="hidden peer">
+                <div class="peer-checked:bg-purple-900 peer-checked:border-purple-500 border border-slate-600 rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 flex items-center justify-center"><span class="gender-badge bg-rose-500 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">药娘</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="ps-gender" value="femboy" class="hidden peer">
+                <div class="peer-checked:bg-purple-900 peer-checked:border-purple-500 border border-slate-600 rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 flex items-center justify-center"><span class="gender-badge bg-sky-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">CD</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="ps-gender" value="male" class="hidden peer">
+                <div class="peer-checked:bg-emerald-900 peer-checked:border-emerald-500 border border-slate-600 rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 flex items-center justify-center"><span class="gender-badge bg-orange-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">武装直升机</span></div>
+              </label>
+              <label class="block cursor-pointer">
+                <input type="radio" name="ps-gender" value="male" class="hidden peer">
+                <div class="peer-checked:bg-emerald-900 peer-checked:border-emerald-500 border border-slate-600 rounded-xl px-2 sm:px-3 py-1 sm:py-1.5 flex items-center justify-center"><span class="gender-badge bg-lime-600 text-white" style="font-size:11px;padding:2px 7px;min-width:48px;">沃尔玛购物袋</span></div>
+              </label>
+            </div>
+          </div>
+
+          <!-- 名字争夺战开关 -->
+          <div class="mb-5">
+            <div class="flex items-center justify-between mb-1.5">
+              <div>
+                <div class="text-xs sm:text-sm text-slate-400">名字争夺战</div>
+                <div class="text-[10px] text-rose-400">开启后昵称锁定，参与专属房间可赌分升级/降级</div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="ps-name-battle-toggle" class="sr-only peer">
+                <div class="w-9 h-5 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-600"></div>
+              </label>
+            </div>
+            <div id="ps-name-battle-status" class="text-[10px] text-slate-500"></div>
+
+            <!-- 难度规则说明（用户要求写在这里） -->
+            <div class="mt-2 p-2.5 bg-slate-900/80 border border-rose-800/50 rounded-2xl text-[10px] text-slate-400 leading-snug">
+              <div class="flex items-center gap-1 text-rose-300 font-medium mb-1">
+                <span>⚔️</span>
+                <span>积分难度规则</span>
+              </div>
+              <div class="space-y-0.5">
+                • <span class="text-rose-400">低分阶段</span>：赢分大幅减少（等级越低越难爬，-7级仅30%）<br>
+                • <span class="text-emerald-400">高分女王/主人</span>：掉分大幅减少（等级越高越稳，顶级仅掉30%）<br>
+                • 扣分在低分时<strong class="text-slate-300">不受影响</strong>，仍全额扣除
+              </div>
+              <div class="mt-1 text-[9px] text-slate-500">实际得分按你当前阶段自动计算，系统会实时提示</div>
+
+              <!-- 新增：名字变更规则（用户要求添加） -->
+              <div class="mt-2 pt-2 border-t border-rose-800/40">
+                <div class="flex items-center gap-1 text-rose-300 font-medium mb-1">
+                  <span>📛</span>
+                  <span>名字变更规则</span>
+                </div>
+                <div class="space-y-0.5">
+                  • 积分掉到关键阈值以下（含进入代号模式）：真实名字会**直接改成**当前称号/代号，不再额外显示单独称号<br>
+                  • 离开名字争夺战（逃跑）：真实名字前会自动加上「逃跑的」（例如 逃跑的林心悦 或 逃跑的SLAVE-XXXX）<br>
+                  • 想去掉「逃跑的」前缀：必须在个人设定里手动修改（90分钟锁定期间无法操作）
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- 结束可滚动内容区 -->
+          </div>
+
+          <!-- 底部按钮（始终可见 + safe-area 适配，不会滚走） -->
+          <div class="flex gap-2 sm:gap-3 px-5 sm:px-6 pt-4 pb-4 flex-shrink-0 border-t border-slate-700 bg-slate-800"
+               style="padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px))">
+            <button id="ps-cancel"
+                    class="flex-1 py-2.5 sm:py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 text-sm font-medium">取消</button>
+            <button id="ps-save"
+                    class="flex-1 py-2.5 sm:py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-sm font-semibold">保存更改</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const nickInput = modal.querySelector('#ps-nickname-input');
+      const saveBtn = modal.querySelector('#ps-save');
+      const cancelBtn = modal.querySelector('#ps-cancel');
+      const nameBattleToggle = modal.querySelector('#ps-name-battle-toggle');
+      const nameBattleStatus = modal.querySelector('#ps-name-battle-status');
+
+      const isLocked = myNameBattleQuitLockUntil && Date.now() < myNameBattleQuitLockUntil;
+      const remainingMinutes = isLocked ? Math.ceil((myNameBattleQuitLockUntil - Date.now()) / 60000) : 0;
+
+      // 控制昵称输入框
+      if (myNameBattleEnabled || isLocked) {
+        nickInput.disabled = true;
+        nickInput.classList.add('opacity-60', 'cursor-not-allowed', 'bg-slate-800');
+        nickInput.classList.remove('bg-slate-900');
+      }
+
+      // 设置名字争夺战开关状态
+      if (nameBattleToggle) {
+        nameBattleToggle.checked = !!myNameBattleEnabled;
+        if (isLocked) {
+          nameBattleToggle.disabled = true;
+        }
+      }
+
+      if (nameBattleStatus) {
+        if (isLocked) {
+          nameBattleStatus.innerHTML = `<span class="text-rose-400">改名锁定中 · 剩余 ${remainingMinutes} 分钟</span>`;
+          nameBattleStatus.classList.add('text-rose-400');
+        } else if (myNameBattleEnabled) {
+          nameBattleStatus.textContent = '已开启 · 昵称已锁定，可参与名字争夺战房间';
+        } else {
+          nameBattleStatus.textContent = '未开启 · 可正常修改昵称';
+        }
+      }
+
+      nickInput.focus();
+      nickInput.select();
+
+      const save = () => {
+        const newNick = nickInput.value.trim().slice(0, 14);
+        const genderRadio = modal.querySelector('input[name="ps-gender"]:checked');
+        const newGender = genderRadio ? genderRadio.value : currentGender;
+        const newGenderLabel = genderRadio ? genderRadio.parentElement.querySelector('div').textContent.trim() : null;
+
+        const nameBattleToggleEl = modal.querySelector('#ps-name-battle-toggle');
+        const newNameBattleEnabled = nameBattleToggleEl ? nameBattleToggleEl.checked : false;
+        const nameBattleChanged = (typeof myNameBattleEnabled !== 'undefined') && (newNameBattleEnabled !== myNameBattleEnabled);
+
+        const isCurrentlyLocked = myNameBattleQuitLockUntil && Date.now() < myNameBattleQuitLockUntil;
+
+        if (!newNick) {
+          nickInput.classList.add('border-rose-500');
+          return;
+        }
+
+        const nickChanged = newNick !== myNickname;
+        const genderChanged = newGender !== currentGender;
+
+        // 锁定期间禁止修改昵称
+        if ((myNameBattleEnabled || isCurrentlyLocked) && nickChanged) {
+          showToast('名字争夺战期间或锁定期间无法修改昵称', 'error');
+          return;
+        }
+
+        // 锁定期间禁止重新开启名字争夺战
+        if (isCurrentlyLocked && newNameBattleEnabled && !myNameBattleEnabled) {
+          showToast('改名锁定期间无法重新开启名字争夺战', 'error');
+          return;
+        }
+
+        if (!nickChanged && !genderChanged && !nameBattleChanged) {
+          document.body.removeChild(modal);
+          return;
+        }
+
+        // 只更新允许修改的部分
+        if (!myNameBattleEnabled && !isCurrentlyLocked && nickChanged) {
+          myNickname = newNick;
+          localStorage.setItem('cjb_nickname', newNick);
+        }
+
+        localStorage.setItem('cjb_gender', newGender);
+        if (newGenderLabel) {
+          localStorage.setItem('cjb_gender_label', newGenderLabel);
+        }
+
+        // 使用统一函数（确保彩色全称性别框）
+        updateWelcomeName();
+
+        if (socket && socket.connected) {
+          // 只有在允许的情况下才发昵称
+          const canSendNick = !myNameBattleEnabled && !isCurrentlyLocked && nickChanged;
+          const profileData = canSendNick 
+            ? { nickname: newNick, gender: newGender, genderLabel: newGenderLabel }
+            : { gender: newGender, genderLabel: newGenderLabel };
+
+          socket.emit('set_profile', profileData);
+
+          if (nameBattleChanged) {
+            socket.emit('set_name_battle', newNameBattleEnabled);
+            myNameBattleEnabled = newNameBattleEnabled;
+          }
+        }
+
+        document.body.removeChild(modal);
+        showToast('设定已更新', 'success');
+      };
+
+      saveBtn.onclick = save;
+      cancelBtn.onclick = () => document.body.removeChild(modal);
+      nickInput.onkeydown = (e) => {
+        if (e.key === 'Enter') save();
+        if (e.key === 'Escape') document.body.removeChild(modal);
+      };
+    }
+
+    // expose for debugging
+    window.CJB = { leaveTable, createTable, quickMatch };
+  </script>
+</body>
+</html>

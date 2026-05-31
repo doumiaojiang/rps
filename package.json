@@ -1,0 +1,21 @@
+{
+  "name": "chui-jian-bu",
+  "version": "1.7.0",
+  "description": "锤子剪刀布联机对战 - 大厅+桌子+实时聊天+战绩，无需注册",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["game", "rps", "multiplayer", "socketio"],
+  "author": "",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
