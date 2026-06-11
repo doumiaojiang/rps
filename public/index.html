@@ -171,6 +171,15 @@
           <span class="text-slate-400 hidden sm:inline">在线</span>
         </div>
 
+        <!-- 好友系统按钮 -->
+        <button onclick="showFriendModal()"
+                class="flex items-center gap-x-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 transition rounded-2xl px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm flex-shrink-0 relative">
+          <i class="fa-solid fa-user-group text-emerald-400"></i>
+          <span class="font-medium text-slate-200 hidden sm:inline">好友</span>
+          <span class="font-medium text-slate-200 sm:hidden">友</span>
+          <span id="friend-badge" class="hidden absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold">0</span>
+        </button>
+
         <!-- 个人设定按钮 (手机优化) -->
         <button onclick="showPersonalSettingsModal()"
                 class="flex items-center gap-x-1 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 transition rounded-2xl px-2.5 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm flex-shrink-0">
@@ -929,6 +938,86 @@
     </div>
   </div>
 
+  <!-- Friend System Modal -->
+  <div id="friend-modal" class="hidden fixed inset-0 bg-black/70 z-[120] flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-3xl w-full max-w-[95vw] sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden" style="height: 600px; max-height: 90vh;">
+      <!-- Header -->
+      <div class="flex items-center justify-between p-3 sm:p-4 border-b border-slate-700 flex-shrink-0">
+        <div class="font-semibold text-base sm:text-lg flex items-center gap-2">
+          <i class="fa-solid fa-user-group text-emerald-400"></i>
+          <span>好友</span>
+          <span id="friend-request-badge" class="hidden text-[10px] px-1.5 py-px bg-rose-600 text-white rounded-full">0</span>
+        </div>
+        <button onclick="hideFriendModal()" class="text-slate-400 hover:text-white text-2xl leading-none px-2">&times;</button>
+      </div>
+
+      <!-- Body: 2 columns on desktop, stacked on mobile -->
+      <div class="flex-1 flex flex-col sm:flex-row min-h-0">
+        <!-- Left: Friend list + add friend -->
+        <div id="friend-left-panel" class="w-full sm:w-72 shrink-0 flex flex-col border-b sm:border-b-0 sm:border-r border-slate-700 min-h-0">
+          <!-- Add friend -->
+          <div class="p-3 border-b border-slate-700 flex-shrink-0">
+            <div class="text-xs text-slate-400 mb-1.5">添加好友（输入对方ID）</div>
+            <div class="flex gap-2">
+              <input id="friend-search-input" type="text" placeholder="例如 Gxxxxx"
+                     class="flex-1 min-w-0 bg-slate-900 border border-slate-600 rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:border-emerald-500 placeholder:text-slate-600">
+              <button onclick="searchFriend()"
+                      class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-xl text-sm font-medium flex-shrink-0">
+                <i class="fa-solid fa-search"></i>
+              </button>
+            </div>
+            <div id="friend-search-result" class="mt-2 hidden"></div>
+          </div>
+
+          <!-- Friend requests -->
+          <div id="friend-requests-section" class="hidden border-b border-slate-700 flex-shrink-0">
+            <div class="px-3 pt-2 pb-1 text-xs uppercase tracking-widest text-rose-400 font-medium">好友请求</div>
+            <div id="friend-requests-list" class="px-3 pb-2 space-y-1.5 max-h-[120px] overflow-auto chat-scroll"></div>
+          </div>
+
+          <!-- Friend list -->
+          <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+            <div class="px-3 pt-2 pb-1 text-xs uppercase tracking-widest text-slate-400 font-medium flex-shrink-0">好友列表</div>
+            <div id="friend-list" class="flex-1 overflow-auto p-2 space-y-1 chat-scroll">
+              <div class="text-center text-slate-500 text-sm py-6">暂无好友<br><span class="text-xs">上方输入ID添加</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Chat area -->
+        <div id="friend-chat-panel" class="flex-1 flex flex-col min-h-0 hidden sm:flex">
+          <!-- Mobile back button -->
+          <div class="sm:hidden flex items-center gap-2 p-2 border-b border-slate-700 flex-shrink-0">
+            <button onclick="showFriendListMobile()" class="text-slate-300 text-sm flex items-center gap-1">
+              <i class="fa-solid fa-chevron-left"></i> 返回
+            </button>
+          </div>
+
+          <!-- Chat header -->
+          <div id="friend-chat-header" class="px-4 py-2 border-b border-slate-700 flex-shrink-0 hidden sm:flex items-center gap-2">
+            <span class="text-sm font-medium text-slate-300">选择一个好友开始聊天</span>
+          </div>
+
+          <!-- Chat messages -->
+          <div id="friend-chat-messages" class="flex-1 overflow-auto p-3 space-y-2 text-sm chat-scroll bg-slate-900"></div>
+
+          <!-- Chat input -->
+          <div id="friend-chat-input-area" class="p-3 border-t border-slate-700 flex-shrink-0 hidden">
+            <div class="flex gap-2 items-center">
+              <input id="friend-chat-input" type="text" maxlength="280" placeholder="输入私信后按回车..."
+                     onkeydown="if(event.key==='Enter') sendFriendChat()"
+                     class="flex-1 min-w-0 bg-slate-900 border border-slate-600 text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500 placeholder:text-slate-600">
+              <button onclick="sendFriendChat()"
+                      class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-xl transition font-medium flex-shrink-0">
+                <i class="fa-solid fa-paper-plane"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container" class="fixed bottom-4 right-4 space-y-2 z-[100]"></div>
 
   <script src="/socket.io/socket.io.js"></script>
@@ -1351,6 +1440,354 @@
       socket.on('disconnect', () => {
         showToast('与服务器断开，正在重连...', 'error');
       });
+
+      // ===== 好友系统 Socket 事件 =====
+      socket.on('friend_update', (data) => {
+        myFriends = data.friends || [];
+        myFriendRequests = data.requests || [];
+        friendUnread = data.unread || {};
+        if (document.getElementById('friend-modal') && !document.getElementById('friend-modal').classList.contains('hidden')) {
+          renderFriendList();
+          renderFriendRequests();
+        }
+        updateFriendBadge();
+      });
+
+      socket.on('friend_request_received', (req) => {
+        showToast(`收到来自 ${req.nickname || req.from} 的好友请求`, 'info');
+        if (socket) socket.emit('friend_list');
+      });
+
+      socket.on('friend_request_sent', (data) => {
+        showToast(`已向 ${data.nickname || data.targetId} 发送好友请求`, 'info');
+      });
+
+      socket.on('friend_request_auto_accepted', (data) => {
+        showToast(`你已与 ${data.nickname || data.from} 成为好友`, 'success');
+        if (socket) socket.emit('friend_list');
+      });
+
+      socket.on('private_chat_message', (msg) => {
+        // 如果当前正在和这个好友聊天，追加到消息列表
+        if (selectedFriendId && (msg.from === selectedFriendId || msg.to === selectedFriendId)) {
+          if (!friendChatHistory[selectedFriendId]) friendChatHistory[selectedFriendId] = [];
+          friendChatHistory[selectedFriendId].push(msg);
+          appendFriendChatMessage(msg);
+          // 标记已读
+          if (socket && msg.from === selectedFriendId) {
+            socket.emit('private_chat_read', { with: selectedFriendId });
+          }
+        } else if (msg.from !== myGuestId) {
+          // 没打开聊天或正在和其他人聊，增加未读
+          if (!friendUnread[msg.from]) friendUnread[msg.from] = 0;
+          friendUnread[msg.from]++;
+          updateFriendBadge();
+          if (document.getElementById('friend-modal') && !document.getElementById('friend-modal').classList.contains('hidden')) {
+            renderFriendList();
+          }
+          showToast(`收到 ${msg.from} 的新私信`, 'info');
+        }
+      });
+
+      socket.on('private_chat_history', (data) => {
+        if (data.friendId && data.history) {
+          friendChatHistory[data.friendId] = data.history;
+          if (selectedFriendId === data.friendId) {
+            renderFriendChatMessages();
+          }
+        }
+      });
+
+      socket.on('friend_search_result', (data) => {
+        const resultEl = document.getElementById('friend-search-result');
+        if (!resultEl) return;
+        if (!data.found) {
+          resultEl.innerHTML = `<div class="text-xs text-rose-400">未找到用户 ${data.targetId}</div>`;
+          resultEl.classList.remove('hidden');
+          return;
+        }
+        // 检查是否已经是好友
+        const alreadyFriend = myFriends.some(f => f.guestId === data.targetId);
+        resultEl.innerHTML = `
+          <div class="flex items-center justify-between bg-slate-900 rounded-xl px-3 py-2">
+            <div class="flex items-center gap-2 min-w-0">
+              ${getGenderIcon(data.gender, data.genderLabel)}
+              <span class="text-sm font-medium text-slate-200 truncate">${data.nickname}</span>
+              <code class="text-[10px] text-slate-500 font-mono">${data.targetId}</code>
+            </div>
+            ${alreadyFriend 
+              ? `<span class="text-[10px] text-emerald-400 px-2 py-0.5 bg-emerald-900/40 rounded">已是好友</span>`
+              : `<button onclick="sendFriendRequest('${data.targetId}')" class="text-xs px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white font-medium">添加</button>`
+            }
+          </div>
+        `;
+        resultEl.classList.remove('hidden');
+      });
+    }
+
+    // ==================== 好友系统状态 ====================
+    let myFriends = [];
+    let myFriendRequests = [];
+    let selectedFriendId = null;
+    let friendChatHistory = {};
+    let friendUnread = {};
+
+    function updateFriendBadge() {
+      const badge = document.getElementById('friend-badge');
+      if (!badge) return;
+      const totalUnread = Object.values(friendUnread).reduce((a, b) => a + b, 0);
+      const requestCount = myFriendRequests.length;
+      const total = totalUnread + requestCount;
+      if (total > 0) {
+        badge.classList.remove('hidden');
+        badge.innerText = total > 99 ? '99+' : total;
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    function showFriendModal() {
+      const modal = document.getElementById('friend-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      if (socket && socket.connected) {
+        socket.emit('friend_list');
+        // 如果有选中好友，刷新其历史
+        if (selectedFriendId) {
+          socket.emit('private_chat_history', { with: selectedFriendId });
+        }
+      }
+      // 移动端默认显示列表，桌面端显示两栏
+      if (window.innerWidth < 640) {
+        showFriendListMobile();
+      } else {
+        const left = document.getElementById('friend-left-panel');
+        const right = document.getElementById('friend-chat-panel');
+        if (left) left.classList.remove('hidden');
+        if (right) {
+          right.classList.remove('hidden');
+          right.classList.add('flex');
+        }
+      }
+    }
+
+    function hideFriendModal() {
+      const modal = document.getElementById('friend-modal');
+      modal.classList.remove('flex');
+      modal.classList.add('hidden');
+      // 清空搜索结果
+      const resultEl = document.getElementById('friend-search-result');
+      if (resultEl) {
+        resultEl.classList.add('hidden');
+        resultEl.innerHTML = '';
+      }
+      const input = document.getElementById('friend-search-input');
+      if (input) input.value = '';
+    }
+
+    function showFriendListMobile() {
+      const left = document.getElementById('friend-left-panel');
+      const right = document.getElementById('friend-chat-panel');
+      if (left) left.classList.remove('hidden');
+      if (right) {
+        right.classList.add('hidden');
+        right.classList.remove('flex');
+      }
+    }
+
+    function showFriendChatMobile() {
+      const left = document.getElementById('friend-left-panel');
+      const right = document.getElementById('friend-chat-panel');
+      if (left) left.classList.add('hidden');
+      if (right) {
+        right.classList.remove('hidden');
+        right.classList.add('flex');
+      }
+    }
+
+    function renderFriendList() {
+      const container = document.getElementById('friend-list');
+      if (!container) return;
+
+      if (!myFriends || myFriends.length === 0) {
+        container.innerHTML = `<div class="text-center text-slate-500 text-sm py-6">暂无好友<br><span class="text-xs">上方输入ID添加</span></div>`;
+        return;
+      }
+
+      container.innerHTML = '';
+      myFriends.forEach(f => {
+        const isSelected = selectedFriendId === f.guestId;
+        const unread = friendUnread[f.guestId] || 0;
+        const div = document.createElement('div');
+        div.className = `flex items-center justify-between px-2.5 py-2 rounded-xl cursor-pointer transition ${isSelected ? 'bg-emerald-900/30 border border-emerald-700/50' : 'hover:bg-slate-700/50 border border-transparent'}`;
+        div.onclick = () => selectFriend(f.guestId);
+
+        const display = getNameBattleDisplay(f);
+        div.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0 flex-1">
+            <div class="w-2 h-2 rounded-full ${f.online ? 'bg-emerald-400' : 'bg-slate-600'} flex-shrink-0"></div>
+            <div class="truncate text-sm ${isSelected ? 'text-emerald-200' : 'text-slate-200'}">${display}</div>
+          </div>
+          ${unread > 0 ? `<span class="text-[10px] px-1.5 py-px bg-rose-600 text-white rounded-full font-bold flex-shrink-0">${unread > 99 ? '99+' : unread}</span>` : ''}
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderFriendRequests() {
+      const section = document.getElementById('friend-requests-section');
+      const list = document.getElementById('friend-requests-list');
+      const badge = document.getElementById('friend-request-badge');
+      if (!section || !list) return;
+
+      if (!myFriendRequests || myFriendRequests.length === 0) {
+        section.classList.add('hidden');
+        if (badge) badge.classList.add('hidden');
+        return;
+      }
+
+      section.classList.remove('hidden');
+      if (badge) {
+        badge.classList.remove('hidden');
+        badge.innerText = myFriendRequests.length;
+      }
+
+      list.innerHTML = '';
+      myFriendRequests.forEach(req => {
+        const div = document.createElement('div');
+        div.className = 'flex items-center justify-between bg-slate-900 rounded-xl px-2.5 py-2';
+        const display = getNameBattleDisplay({
+          gender: req.gender,
+          genderLabel: req.genderLabel,
+          nickname: req.nickname,
+          nameBattlePrefix: req.nameBattlePrefix,
+          nameBattleScore: req.nameBattleScore,
+          nameBattleCode: req.nameBattleCode
+        });
+        div.innerHTML = `
+          <div class="flex items-center gap-1.5 min-w-0 truncate text-sm text-slate-200">${display}</div>
+          <div class="flex items-center gap-1 flex-shrink-0 ml-2">
+            <button onclick="acceptFriendRequest('${req.from}')" class="text-[10px] px-2 py-1 bg-emerald-600 hover:bg-emerald-500 rounded text-white">接受</button>
+            <button onclick="rejectFriendRequest('${req.from}')" class="text-[10px] px-2 py-1 bg-slate-600 hover:bg-slate-500 rounded text-slate-200">忽略</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function selectFriend(guestId) {
+      selectedFriendId = guestId;
+      renderFriendList();
+
+      const friend = myFriends.find(f => f.guestId === guestId);
+      const header = document.getElementById('friend-chat-header');
+      const inputArea = document.getElementById('friend-chat-input-area');
+      const messages = document.getElementById('friend-chat-messages');
+
+      if (header) {
+        header.classList.remove('hidden');
+        header.classList.add('flex');
+        header.innerHTML = friend ? `<span class="text-sm font-medium text-slate-200">${getNameBattleDisplay(friend)}</span><button onclick="removeFriend('${guestId}')" class="ml-auto text-[10px] text-rose-400 hover:text-rose-300 px-2 py-0.5">删除好友</button>` : '';
+      }
+      if (inputArea) inputArea.classList.remove('hidden');
+      if (messages) messages.innerHTML = '';
+
+      if (socket && socket.connected) {
+        socket.emit('private_chat_history', { with: guestId });
+      }
+
+      // 手机端切换到聊天视图
+      if (window.innerWidth < 640) {
+        showFriendChatMobile();
+      }
+    }
+
+    function renderFriendChatMessages() {
+      const box = document.getElementById('friend-chat-messages');
+      if (!box || !selectedFriendId) return;
+      const history = friendChatHistory[selectedFriendId] || [];
+      box.innerHTML = '';
+      history.forEach(msg => {
+        appendFriendChatMessage(msg, false);
+      });
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function appendFriendChatMessage(msg, shouldScroll = true) {
+      const box = document.getElementById('friend-chat-messages');
+      if (!box) return;
+      const isMine = msg.from === myGuestId;
+      const div = document.createElement('div');
+      div.className = `flex ${isMine ? 'justify-end' : 'justify-start'}`;
+      const time = new Date(msg.ts).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+      div.innerHTML = `
+        <div class="max-w-[78%]">
+          <div class="text-[10px] text-slate-400 mb-px ${isMine ? 'text-right' : ''}">${time}</div>
+          <div class="inline-block ${isMine ? 'bg-emerald-600' : 'bg-slate-700'} text-white px-3 py-1.5 rounded-2xl text-sm leading-snug">${escapeHtml(msg.message)}</div>
+        </div>
+      `;
+      box.appendChild(div);
+      if (shouldScroll) box.scrollTop = box.scrollHeight;
+    }
+
+    function sendFriendChat() {
+      const input = document.getElementById('friend-chat-input');
+      if (!input || !selectedFriendId || !socket) return;
+      const val = input.value.trim();
+      if (!val) return;
+      socket.emit('private_chat_send', { to: selectedFriendId, message: val });
+      input.value = '';
+    }
+
+    function searchFriend() {
+      const input = document.getElementById('friend-search-input');
+      if (!input || !socket) return;
+      const val = input.value.trim();
+      if (!val) return;
+      socket.emit('friend_search', val);
+    }
+
+    function sendFriendRequest(targetId) {
+      if (!socket || !targetId) return;
+      socket.emit('friend_request_send', targetId);
+      const resultEl = document.getElementById('friend-search-result');
+      if (resultEl) {
+        resultEl.classList.add('hidden');
+        resultEl.innerHTML = '';
+      }
+      const input = document.getElementById('friend-search-input');
+      if (input) input.value = '';
+    }
+
+    function acceptFriendRequest(fromId) {
+      if (!socket || !fromId) return;
+      socket.emit('friend_request_accept', fromId);
+    }
+
+    function rejectFriendRequest(fromId) {
+      if (!socket || !fromId) return;
+      socket.emit('friend_request_reject', fromId);
+    }
+
+    function removeFriend(targetId) {
+      if (!targetId) return;
+      if (!confirm('确定要删除该好友吗？私聊记录也将被清除。')) return;
+      if (socket) socket.emit('friend_remove', targetId);
+      if (selectedFriendId === targetId) {
+        selectedFriendId = null;
+        const header = document.getElementById('friend-chat-header');
+        const inputArea = document.getElementById('friend-chat-input-area');
+        const messages = document.getElementById('friend-chat-messages');
+        if (header) {
+          header.innerHTML = '<span class="text-sm font-medium text-slate-300">选择一个好友开始聊天</span>';
+          header.classList.add('hidden');
+        }
+        if (inputArea) inputArea.classList.add('hidden');
+        if (messages) messages.innerHTML = '';
+      }
+      delete friendChatHistory[targetId];
+      delete friendUnread[targetId];
+      updateFriendBadge();
     }
 
     // ============== LOBBY RENDER ==============
@@ -3351,6 +3788,13 @@
               <input id="ps-nickname-input" 
                      class="w-full bg-slate-900 border border-slate-600 rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 text-base sm:text-lg focus:outline-none"
                      maxlength="14" value="${currentNick}">
+              <div class="mt-2 flex items-center justify-between bg-slate-900/60 border border-slate-700 rounded-xl px-3 py-2">
+                <div class="text-xs text-slate-400">你的用户ID（好友通过此ID添加你）</div>
+                <div class="flex items-center gap-2">
+                  <code id="ps-guest-id" class="text-xs sm:text-sm text-emerald-300 font-mono bg-slate-950 px-2 py-0.5 rounded">${myGuestId || '未知'}</code>
+                  <button onclick="navigator.clipboard.writeText('${myGuestId || ''}').then(()=>showToast('ID已复制','info'))" class="text-[10px] px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-200">复制</button>
+                </div>
+              </div>
             </div>
 
             <div class="mb-5">
